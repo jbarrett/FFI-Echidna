@@ -1,0 +1,10 @@
+Capture::Tiny
+ExtUtils::MakeMaker
+FFI::Platypus
+File::Temp
+File::Which
+Moose
+MooseX::Types::Path::Class
+Test::More
+experimental
+namespace::autoclean
