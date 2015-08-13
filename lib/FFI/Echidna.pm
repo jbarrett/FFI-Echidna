@@ -68,10 +68,35 @@ package FFI::Echidna {
     }
     
     sub die ($self, $error) {
-      say "% @{$self->command_line}";
-      say "[out]\n@{[ $self->stdout ]}" if $self->stdout ne '';
-      say "[err]\n@{[ $self->stderr ]}" if $self->stderr ne '';
+      say STDERR "% @{$self->command_line}";
+      say STDERR "[out]\n@{[ $self->stdout ]}" if $self->stdout ne '';
+      say STDERR "[err]\n@{[ $self->stderr ]}" if $self->stderr ne '';
       croak $error;
+    }
+    
+    __PACKAGE__->meta->make_immutable;
+  }
+
+  package FFI::Echidna::FS {
+
+    use Moose;
+    use MooseX::Singleton;
+    use MooseX::Types::Path::Class;
+    no warnings 'experimental::signatures';
+    use File::Temp ();
+    use namespace::autoclean;
+
+    has tempdir => (
+      is => 'ro',
+      isa => 'Path::Class::Dir',
+      coerce => 1,
+      default => sub { File::Temp::tempdir( CLEANUP => 1 ) },
+    );
+    
+    sub tempfile ($class, @rest) {
+      my($fh, $filename) = $class->tempdir->tempfile(@rest);
+      close $fh;
+      Path::Class::File->new($filename);
     }
     
     __PACKAGE__->meta->make_immutable;
@@ -83,7 +108,6 @@ package FFI::Echidna {
     no warnings 'experimental::signatures';
     use MooseX::Types::Path::Class;
     use File::Which qw( which );
-    use File::Temp qw( tempdir );
     use namespace::autoclean;
     
     has clang_path => (
@@ -96,6 +120,12 @@ package FFI::Echidna {
         die "unable to find clang" unless defined $path;
         $path;
       },
+    );
+    
+    has cpp_flags => (
+      is      => 'ro',
+      default => sub { [] },
+      lazy    => 1,
     );
 
     has version => (
@@ -128,13 +158,13 @@ package FFI::Echidna {
       unless(defined $path) {
         state $empty;
         unless(defined $empty) {
-          $empty = Path::Class::Dir->new(tempdir( CLEANUP => 1 ))->file("foo.h");
+          $empty = FFI::Echidna::FS->tempfile("standardXXXX", SUFFIX => '.h');
           $empty->spew("#include <stdio.h>\n#include <stddef.h>\n#include <stdint.h>\n#include <inttypes.h>\n");
         }
         $path = $empty;
       }
       
-      foreach my $line (split /\n\r?/, $self->run(qw( -dM -E ), $path)->die_on_error->stdout) {
+      foreach my $line (split /\n\r?/, $self->run($self->cpp_flags->@*, qw( -dM -E ), $path)->die_on_error->stdout) {
         if($line =~ /^#define ([A-Za-z_][A-Za-z_0-9]*) (.*)$/) {
           $macros{$1} = $2;
         }
@@ -163,7 +193,7 @@ package FFI::Echidna {
     }
     
     sub ast_list ($self, $path) {
-      my($first, @out) = split /\n\r?/, $self->run(qw( -Xclang -ast-dump -fsyntax-only ), $path)->die_on_error->stdout;
+      my($first, @out) = split /\n\r?/, $self->run($self->cpp_flags->@*, qw( -Xclang -ast-dump -fsyntax-only ), $path)->die_on_error->stdout;
       
       my @ast = ($first);
       
@@ -234,10 +264,15 @@ package FFI::Echidna {
     no warnings 'experimental::signatures';
     use namespace::autoclean;
 
-    around BUILDARGS => sub ($orig, $class, $path) {
-    
-      my %attr;
-      my $clang = FFI::Echidna::ClangWrapper->new;
+    around BUILDARGS => sub ($orig, $class, $path, %attr) {
+
+      my $clang = $attr{clang} = FFI::Echidna::ClangWrapper->new($attr{clang}||={});
+      
+      unless(-r $path) {
+        my $tmp_path = FFI::Echidna::FS->tempfile("clang_model_XXXXXX", SUFFIX => ".h");
+        $tmp_path->spew("#include <$path>\n");
+        $path = $tmp_path;
+      }
       
       $attr{ast}    = $clang->ast($path);
       $attr{macros} = $clang->macros($path);
@@ -253,6 +288,12 @@ package FFI::Echidna {
     
     has macros => (
       is       => 'ro',
+      required => 1,
+    );
+    
+    has clang => (
+      is       => 'ro',
+      isa      => 'FFI::Echidna::ClangWrapper',
       required => 1,
     );
 

@@ -33,8 +33,16 @@ package MyModel {
   __PACKAGE__->meta->make_immutable;
 }
 
-my $clang_model = FFI::Echidna::ClangModel->new('/usr/include/GL/gl.h');
+my $clang;
+
+foreach my $header (qw( GL/gl.h OpenGL/gl.h )) {
+  say "trying $header";
+  $clang = eval { FFI::Echidna::ClangModel->new($header) };
+  last if $@ eq '';
+}
+
+die $@ if $@;
 
 my $model = MyModel->new;
 
-$clang_model->append_to_model($model);
+$clang->append_to_model($model);
