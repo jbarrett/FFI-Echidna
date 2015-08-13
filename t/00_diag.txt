@@ -11,5 +11,7 @@ Moose
 MooseX::Getopt
 MooseX::Singleton
 MooseX::Types::Path::Class
+Test::Dir
+Test::File
 Test::More
 namespace::autoclean

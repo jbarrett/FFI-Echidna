@@ -148,12 +148,15 @@ package FFI::Echidna {
           my $dir = eval { dist_dir('FFI-Echidna') };
           return $dir unless $@;
         }
-        Path::Class::File->new($INC{'FFI/Echidna.pm'})
+        my $dir = Path::Class::File->new($INC{'FFI/Echidna.pm'})
           ->absolute
           ->parent
           ->parent
-          ->parent
-          ->subdir(qw( share ));
+          ->parent;
+        $dir = $dir->parent if $dir->basename eq 'blib';
+        $dir = $dir->subdir(qw( share ));
+        return $dir if -d $dir;
+        die "unable to find share dir";
       },
     );
     
