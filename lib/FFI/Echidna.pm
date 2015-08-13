@@ -547,6 +547,10 @@ package FFI::Echidna {
       isa      => 'Int',
       required => 1,
     );
+    
+    sub to_string ($self) {
+      join ':', $self->filename, $self->line, $self->column;
+    }
 
   }
 
