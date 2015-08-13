@@ -277,11 +277,27 @@ package FFI::Echidna {
       my $linenumber = '';
       my $col;
       
+      push @out, '';
+      
       foreach my $line (@out) {
-        $line =~ s/^(?<prefix>[| ]*(\||`)-)// || die "unable to parse: $line";
+        $line =~ s/^(?<prefix>[| ]*(\||`)-)// || $line eq '' || die "unable to parse: $line";
         my $prefix = $+{prefix};
         my $count  = length $prefix;
         $current_indent = $count unless defined $current_indent;
+        
+        if($current_indent < $count) {
+          push @stack, $current_list;
+          $current_list = $current_list->[-1];
+        } else {
+          if(ref $current_list->[-1] eq 'ARRAY' && $current_list->[-1]->$#* == 0) {
+            $current_list->[-1] = ($current_list->[-1]->[0]);
+          }
+          if($current_indent > $count) {
+            $current_list = pop @stack;
+          }
+        }
+        $current_indent = $count;
+        last if $line eq '';
         
         my @locations;
         
@@ -304,19 +320,6 @@ package FFI::Echidna {
         }
         
         $line = "$line echidna_location(@locations)";
-        
-        if($current_indent < $count) {
-          push @stack, $current_list;
-          $current_list = $current_list->[-1];
-        } else {
-          if(ref $current_list->[-1] eq 'ARRAY' && $current_list->[-1]->$#* == 0) {
-            $current_list->[-1] = ($current_list->[-1]->[0]);
-          }
-          if($current_indent > $count) {
-            $current_list = pop @stack;
-          }
-        }
-        $current_indent = $count;
         
         push @$current_list, [ $line ];
       }
