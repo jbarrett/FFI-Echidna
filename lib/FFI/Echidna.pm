@@ -119,6 +119,7 @@ package FFI::Echidna {
 
     use File::Temp ();
     use File::ShareDir qw( dist_dir );
+    use File::HomeDir ();
     use FFI::Echidna::OO qw( MooseX::Singleton MooseX::Types::Path::Class );
 
     has tempdir => (
@@ -157,6 +158,20 @@ package FFI::Echidna {
         $dir = $dir->subdir(qw( share ));
         return $dir if -d $dir;
         die "unable to find share dir";
+      },
+    );
+    
+    has homedir => (
+      is      => 'ro',
+      isa     => 'Path::Class::Dir',
+      coerce  => 1,
+      lazy    => 1,
+      default => sub ($self) {
+        my $dir = eval { File::HomeDir->my_home };
+        return $dir if defined $dir && -d $dir;
+        $dir = $self->tempdir->subdir('fakehome');
+        $dir->mkpath(0, 0700);
+        $dir;
       },
     );
     
