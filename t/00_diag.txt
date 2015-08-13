@@ -1,6 +1,8 @@
 Capture::Tiny
+Devel::CheckBin
 ExtUtils::MakeMaker
 FFI::Platypus
+File::HomeDir
 File::ShareDir
 File::ShareDir::Install
 File::Temp

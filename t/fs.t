@@ -1,5 +1,6 @@
 use strict;
 use warnings;
+use 5.020;
 use FFI::Echidna;
 use Test::More tests => 4;
 use Test::Dir;
@@ -13,17 +14,20 @@ subtest 'tempdir' => sub {
 };
 
 subtest 'tempfile' => sub {
-  plan tests => 5;
+  plan tests => 7;
   my $tempfile = FFI::Echidna::FS->tempfile("foo_XXXX", SUFFIX => ".c");
   isa_ok $tempfile, 'Path::Class::File';
   file_exists_ok $tempfile;
   file_empty_ok $tempfile;
   $tempfile->spew("mycontent");  
   is scalar($tempfile->slurp), "mycontent", "read and write content";
-  file_not_empty_ok $tempfile;
+  file_not_empty_ok $tempfile;  
+  is $tempfile->parent, FFI::Echidna::FS->tempdir, "tempfile is in our tempdir";
+  like $tempfile->basename, qr{^foo_....\.c$}, "filename pattern matches";
 };
 
 subtest 'sharedir' => sub {
+  plan tests => 4;
   my $sharedir = FFI::Echidna::FS->sharedir;
   isa_ok $sharedir, 'Path::Class::Dir';
   dir_exists_ok $sharedir;
@@ -34,6 +38,7 @@ subtest 'sharedir' => sub {
 };
 
 subtest 'homedir' => sub {
+  plan tests => 2;
   my $homedir = FFI::Echidna::FS->homedir;
   isa_ok $homedir, 'Path::Class::Dir';
   dir_exists_ok $homedir;
