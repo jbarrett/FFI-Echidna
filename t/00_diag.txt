@@ -1,14 +1,15 @@
 Capture::Tiny
 ExtUtils::MakeMaker
 FFI::Platypus
+File::ShareDir
 File::ShareDir::Install
 File::Temp
 File::Which
 Getopt::Long::Descriptive
+Import::Into
 Moose
 MooseX::Getopt
 MooseX::Singleton
 MooseX::Types::Path::Class
 Test::More
-experimental
 namespace::autoclean

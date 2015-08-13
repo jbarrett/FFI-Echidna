@@ -118,13 +118,15 @@ package FFI::Echidna {
   package FFI::Echidna::FS {
 
     use File::Temp ();
+    use File::ShareDir qw( dist_dir );
     use FFI::Echidna::OO qw( MooseX::Singleton MooseX::Types::Path::Class );
 
     has tempdir => (
-      is => 'ro',
-      isa => 'Path::Class::Dir',
-      coerce => 1,
+      is      => 'ro',
+      isa     => 'Path::Class::Dir',
+      coerce  => 1,
       default => sub { File::Temp::tempdir( CLEANUP => 1 ) },
+      lazy    => 1,
     );
     
     sub tempfile ($class, @rest) {
@@ -132,6 +134,28 @@ package FFI::Echidna {
       close $fh;
       Path::Class::File->new($filename);
     }
+    
+    has sharedir => (
+      is      => 'ro',
+      isa     => 'Path::Class::Dir',
+      coerce  => 1,
+      lazy    => 1,
+      default => sub {
+        if($ENV{FFI_ECHIDNA_DIR} && -d $ENV{FFI_ECHIDNA_DIR}) {
+          return $ENV{FFI_ECHIDNA_DIR};
+        }
+        if(defined $FFI::Echidna::FS::VERSION) {
+          my $dir = eval { dist_dir('FFI-Echidna') };
+          return $dir unless $@;
+        }
+        Path::Class::File->new($INC{'FFI/Echidna.pm'})
+          ->absolute
+          ->parent
+          ->parent
+          ->parent
+          ->subdir(qw( share ));
+      },
+    );
     
     __PACKAGE__->meta->make_immutable;
   }
