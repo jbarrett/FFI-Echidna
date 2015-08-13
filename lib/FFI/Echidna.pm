@@ -14,6 +14,7 @@ package FFI::Echidna {
     use Moose;
     no warnings 'experimental::signatures';
     use Capture::Tiny qw( capture );
+    use Carp qw( croak );
     use namespace::autoclean;
 
     around BUILDARGS => sub ($orig, $class, @command_line) {
@@ -70,7 +71,7 @@ package FFI::Echidna {
       say "% @{$self->command_line}";
       say "[out]\n@{[ $self->stdout ]}" if $self->stdout ne '';
       say "[err]\n@{[ $self->stderr ]}" if $self->stderr ne '';
-      die $error;
+      croak $error;
     }
     
     __PACKAGE__->meta->make_immutable;
@@ -103,8 +104,10 @@ package FFI::Echidna {
       default => sub ($self) {
         my $result = $self->run("--version")->die_on_error;
         my $out = $result->stdout;
-        if($out =~ /^clang version ([0-9.]+)/) {
-          return $1;
+        if($out =~ /^clang version (?<version>[0-9.]+)/) {
+          return $+{version};
+        } elsif($out =~ /based on LLVM (?<version>[0-9.]+(svn)?)/) {
+          return $+{version};
         } else {
           $result->die("unable to determine version");
         }
