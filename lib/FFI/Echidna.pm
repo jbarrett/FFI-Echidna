@@ -188,16 +188,17 @@ package FFI::Echidna {
       my @ast = ($first);
       
       my $current_list = \@ast;
-      my $current_indent = 1;
+      my $current_indent;
       my @stack;
       my $filename  = '';
       my $linenumber = '';
       my $col;
       
       foreach my $line (@out) {
-        $line =~ s/^(?<prefix>(\| )*(\||`)-)//;
+        $line =~ s/^(?<prefix>[| ]*(\||`)-)// || die "unable to parse: $line";
         my $prefix = $+{prefix};
-        my $count  = () = $prefix =~ /(\||`)/gi;
+        my $count  = length $prefix;
+        $current_indent = $count unless defined $current_indent;
         
         my @locations;
         
