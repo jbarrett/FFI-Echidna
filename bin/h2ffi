@@ -7,3 +7,7 @@ use experimental qw( signatures postderef );
 use App::h2ffi;
 
 exit App::h2ffi->main;
+
+# PODNAME: h2ffi
+# ABSTRACT: Convert C header file to a Perl FFI extension
+# VERSION

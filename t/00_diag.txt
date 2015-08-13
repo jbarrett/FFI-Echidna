@@ -1,9 +1,13 @@
 Capture::Tiny
 ExtUtils::MakeMaker
 FFI::Platypus
+File::ShareDir::Install
 File::Temp
 File::Which
+Getopt::Long::Descriptive
 Moose
+MooseX::Getopt
+MooseX::Singleton
 MooseX::Types::Path::Class
 Test::More
 experimental
