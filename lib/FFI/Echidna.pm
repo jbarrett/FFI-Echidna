@@ -354,6 +354,7 @@ package FFI::Echidna {
 
     has ast => (
       is       => 'ro',
+      isa      => 'FFI::Echidna::ClangAstNode',
       required => 1,
     );
     
@@ -573,17 +574,17 @@ package FFI::Echidna {
       
         if($item->isa('FFI::Echidna::ModuleModel::Constant')) {
           push $self->constants->@*, $item;
-          $self->_hash->{$item->name} = $item;
+          $self->_hash->{constants}->{$item->name} = $item;
         }
         
         elsif($item->isa('FFI::Echidna::ModuleModel::Typedef')) {
           push $self->typedefs->@*, $item;
-          $self->_hash->{$item->alias} = $item;
+          $self->_hash->{typedefs}->{$item->alias} = $item;
         }
         
         elsif($item->isa('FFI::Echidna::ModuleModel::Function')) {
-          push $self->typedefs->@*, $item;
-          $self->_hash->{$item->name} = $item;
+          push $self->functions->@*, $item;
+          $self->_hash->{functions}->{$item->name} = $item;
         }
         
         else {
