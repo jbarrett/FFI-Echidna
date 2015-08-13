@@ -21,6 +21,8 @@ foreach my $pm (grep { !$_->is_dir } dir(qw( lib App ))->children)
   
   say $bin;
   $tt->process(\$template, { app => $app, abstract => $abstract, pod => join('', @data) }, $bin->stringify);
+  
+  chmod 0755, $bin;
 }
 
 __DATA__
