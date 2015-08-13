@@ -7,6 +7,24 @@ package FFI::Echidna {
 
   # ABSTRACT: Developer tools for FFI
 
+  package FFI::Echidna::Type {
+  
+    use Moose::Util::TypeConstraints;
+    use MooseX::Getopt ();
+    use namespace::autoclean;
+
+    subtype 'FFI::Echidna::Type::RegexpRef'
+    => as 'RegexpRef';
+    
+    coerce 'FFI::Echidna::Type::RegexpRef'
+    => from 'Str'
+    => via { qr{$_} };
+    
+    MooseX::Getopt::OptionTypeMap->add_option_type_to_map(
+      'FFI::Echidna::Type::RegexpRef' => '=s',
+    );
+  }
+
   package FFI::Echidna::OO {
   
     use Import::Into;
@@ -718,6 +736,74 @@ package FFI::Echidna {
       }
     }
   }
+  
+  package FFI::Echidna::Template {
+    
+    use Moose::Role;
+    
+    has include_path => (
+      is      => 'ro',
+      lazy    => 1,
+      default => sub {
+        [FFI::Echidna::FS->sharedir->subdir('tt')],
+      },
+    );
+    
+    requires 'process';
+    
+  };
+  
+  package FFI::Echidna::Template::TT {
+  
+    use FFI::Echidna::OO;
+    
+    with 'FFI::Echidna::Template';
+
+    has tt => (
+      is      => 'ro',
+      lazy    => 1,
+      default => sub ($self) {
+        require Template;
+        require Template::Context;
+        my $c = Template::Context->new({
+          INCLUDE_PATH => [ map { $_->stringify } $self->include_path->@* ],
+          FILTERS      => {
+            perl_constant => sub ($value) {
+              eval $value;
+              # TODO: use Data::Dumper to dump this to a valid
+              # Perl string, accounting for quotes and such.
+              $@ ? "'$value'" : $value;
+            },
+          },
+        });
+        
+        $c->define_vmethod(
+          hash => perl_render => sub ($node) {
+            if(eval { $node->isa('FFI::Echidna::ModuleModel::Typedef') }) {
+              return sprintf "'%s' => '%s'", $node->type, $node->alias;
+            } else {
+              die "perl_render does not know how to handle a ", ref $node;
+            }
+          },
+        );
+        
+        Template->new({ CONTEXT => $c });
+      },
+    );
+    
+    sub process ($self, $input, $vars, $output=undef) {
+    
+      $input = "$input" if eval { $input->isa('Path::Class::File') };
+      $output = "$output" if defined $output && eval { $output->isa('Path::Class::File') };
+      $self->tt->process($input, $vars, $output) || die $self->tt->error;
+      
+      return;
+    }
+    
+    BEGIN { $INC{'FFI/Echidna/Template/TT.pm'} = __FILE__ }
+  
+  }
+  
 }
 
 1;

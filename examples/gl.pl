@@ -6,9 +6,7 @@ use FFI::Echidna;
 
 package MyModel {
 
-  use Moose;
-  no warnings 'experimental::signatures';
-  use namespace::autoclean;
+  use FFI::Echidna::OO;
   
   extends 'FFI::Echidna::ModuleModel';
   

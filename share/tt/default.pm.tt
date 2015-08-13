@@ -1,15 +1,32 @@
-package [% pm.package_name %];
+package [% h2ffi.perl_package_name %];
 
 use strict;
 use warnings;
-use [% pm.minimum_perl %];
+use [% h2ffi.perl_minimum_version %];
 use FFI::Platypus ();
 use FFI::CheckLib ();
+use constant {
+[% FOREACH constant IN model.constants -%]
+  [% constant.name %] => [% constant.value | perl_constant %],
+[% END -%]
+};
 
 my $ffi = FFI::Platypus->new(
+[% IF h2ffi.libname -%]
   FFI::CheckLib::find_lib_or_die(
-    lib => '[% pm.libname %]'
-  )
+    lib => '[% h2ffi.libname %]',
+  ),
+[% ELSE -%]
+  lib => undef,
+[% END -%]
 );
+
+[% FOREACH typedef IN model.typedefs -%]
+$ffi->type([% typedef.perl_render %]);
+[% END -%]
+
+[% FOREACH function IN model.functions -%]
+$ffi->attach([% function.name %] => [] => 'void');
+[% END -%]
 
 1;
