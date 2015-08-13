@@ -23,6 +23,7 @@ package FFI::Echidna {
     MooseX::Getopt::OptionTypeMap->add_option_type_to_map(
       'FFI::Echidna::Type::RegexpRef' => '=s',
     );
+    
   }
 
   package FFI::Echidna::OO {
@@ -807,3 +808,47 @@ package FFI::Echidna {
 }
 
 1;
+
+__END__
+
+=head1 SYNOPSIS
+
+ % h2ffi \
+   --perl_package_name OpenGL::FFI::Mesa::GL \
+   --libname GL \
+   --filter_constant ^GL_ \
+   --filter_typedef ^GL \
+   --filter_function ^gl \
+   GL/gl.h
+
+=head1 DESCRIPTION
+
+The goal of L<FFI::Echidna> is to provide tools for writing FFI
+modules in Perl using L<FFI::Platypus> (and in the future possibly
+other FFI tool sets and languages).  I expect the first tangible
+and public interface to be L<h2ffi>, which will generate a Perl
+extension to an existing library using its C header files in the
+same vein as L<h2xs>.  In the longer term I'd like to add tools
+to interface with other languages (both on the DLL side and on the
+scripting/VM side).
+
+I intend on using the L<FFI::Echidna> API in order to build
+L<OpenGL::FFI>, which will support a number of different OpenGL
+implementations, each with subtle incompatibilities, and hundreds
+of functions and constants.  At the moment, you should consider
+the API to be quite unstable (not to mention undocumented).  If
+that doesn't deter you, you should feel free to try this out.  A
+good place to start, is perhaps L<OpenGL::FFI> itself which will
+serve as a working example.
+
+=head1 SEE ALSO
+
+=over 4
+
+=item L<h2ffi>
+
+=item L<FFI::Platypus>
+
+=back
+
+=cut

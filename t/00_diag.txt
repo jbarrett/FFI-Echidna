@@ -10,9 +10,13 @@ File::Which
 Getopt::Long::Descriptive
 Import::Into
 Moose
+Moose::Role
+Moose::Util::TypeConstraints
 MooseX::Getopt
 MooseX::Singleton
 MooseX::Types::Path::Class
+Template
+Template::Context
 Test::Dir
 Test::File
 Test::More

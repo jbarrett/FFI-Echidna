@@ -5,6 +5,13 @@ pod_spelling_system:
   # (regardless of what spell check thinks)
   stopwords:
     - h2ffi
+    - GL
+    - OpenGL
+    - TT
+    - dll
+    - libarchive
+    - libname
+    - xs
 
 pod_coverage:
   skip: 0

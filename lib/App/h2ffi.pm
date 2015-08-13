@@ -7,7 +7,7 @@ use FFI::Echidna;
 package App::h2ffi {
 
   use FFI::Echidna::OO qw( Moose::Util::TypeConstraints );
-	
+
   with 'MooseX::Getopt';
 
   has perl_package_name => (
@@ -162,10 +162,20 @@ standard C library.
 Specify the template engine to use.  At the moment, only Template Toolkit (TT)
 is supported.
 
+=head2 --filter_constant
+
+Specify a regular expression to filter constants.  The name of the
+constant must match.
+
 =head2 --filter_typedef
 
 Specify a regular expression to filter typedefs.  The alias portion of the
 typedef must match.
+
+=head2 --filter_function
+
+Specify a regular expression to filter functions.  The name of the
+function must match.
 
 =head1 SEE ALSO
 
