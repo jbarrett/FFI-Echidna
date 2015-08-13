@@ -34,31 +34,8 @@ package FFI::Echidna {
 
     };
 
-    has command_line => (
-      is       => 'ro',
-      required => 1,
-    );
+    has $_ => ( is => 'ro', required => 1 ) for qw( command_line stdout stderr errno child_error );
 
-    has stdout => (
-      is       => 'ro',
-      required => 1,
-    );
-    
-    has stderr => (
-      is       => 'ro',
-      required => 1,
-    );
-    
-    has errno => (
-      is       => 'ro',
-      required => 1,
-    );
-    
-    has child_error => (
-      is       => 'ro',
-      required => 1,
-    );
-    
     sub command ($self) {
       $self->command_line->[0];
     }
