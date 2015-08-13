@@ -16,4 +16,6 @@ MooseX::Types::Path::Class
 Test::Dir
 Test::File
 Test::More
+Test::Script
+YAML::XS
 namespace::autoclean
