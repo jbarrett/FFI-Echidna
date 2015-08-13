@@ -1,0 +1,9 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use 5.020;
+use experimental qw( signatures postderef );
+use App::h2ffi;
+
+exit App::h2ffi->main;
