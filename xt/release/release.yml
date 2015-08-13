@@ -12,6 +12,7 @@ pod_spelling_system:
     - libarchive
     - libname
     - xs
+    - h2xs
 
 pod_coverage:
   skip: 0
