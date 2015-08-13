@@ -1,0 +1,50 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use 5.020;
+use App::ech_clang_ast;
+
+# PODNAME: ech_clang_ast
+# ABSTRACT: Dump the Clang AST of a header file
+
+exit App::ech_clang_ast->main(@ARGV);
+
+__END__
+
+
+=head1 SYNOPSIS
+
+ ech_clang_ast foo.h
+
+=head1 DESCRIPTION
+
+This program dumps the clang ast into yaml format, which may be useful
+in debugging L<h2ffi> and L<FFI::Echidna>.
+
+=head1 OPTIONS
+
+=head2 --clang
+
+Specify the clang executable to use.  Usually this is C<clang> or C<clang++>
+
+=head1 SEE ALSO
+
+=over 4
+
+=item L<h2ffi>
+
+Generate a Perl FFI extension from a C header file.
+
+=item L<FFI::Platypus>
+
+Module for writing Perl extensions using FFI.
+
+=item L<FFI::Echidna>
+
+Platypus' scrappy little brother.  Provides the machinery for this program.
+
+=back
+
+=cut
+

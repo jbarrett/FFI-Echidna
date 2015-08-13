@@ -6,7 +6,7 @@ use FFI::Echidna;
 
 package App::h2ffi {
 
-  use FFI::Echidna::OO qw( Moose::Util::TypeConstraints );
+  use FFI::Echidna::OO;
 
   with 'MooseX::Getopt';
 

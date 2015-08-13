@@ -13,6 +13,9 @@ pod_spelling_system:
     - libname
     - xs
     - h2xs
+    - ast
+    - AST
+    - yaml
 
 pod_coverage:
   skip: 0
@@ -20,4 +23,5 @@ pod_coverage:
   # for either Class or method.
   private:
     - App::h2ffi
+    - App::ech_clang_ast
 
