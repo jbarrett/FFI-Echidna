@@ -47,6 +47,26 @@ L<FFI::Platypus> will search the current process for symbols.  This is
 frequently useful when creating bindings to functions provided by the
 standard C library.
 
+=head2 --template_engine
+
+Specify the template engine to use.  At the moment, only Template Toolkit (TT)
+is supported.
+
+=head2 --filter_constant
+
+Specify a regular expression to filter constants.  The name of the
+constant must match.
+
+=head2 --filter_typedef
+
+Specify a regular expression to filter typedefs.  The alias portion of the
+typedef must match.
+
+=head2 --filter_function
+
+Specify a regular expression to filter functions.  The name of the
+function must match.
+
 =head1 SEE ALSO
 
 =over 4
