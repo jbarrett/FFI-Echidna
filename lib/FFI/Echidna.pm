@@ -7,15 +7,53 @@ package FFI::Echidna {
 
   # ABSTRACT: Developer tools for FFI
 
-  use FFI::Platypus;
+  package FFI::Echidna::OO {
+  
+    use Import::Into;
+
+    # in principle, I agree with the idea of Moose turning on
+    # warnings.  In principal I agree with warning about
+    # experimental features.  I disagree with turning on
+    # warnings that I explicitly have turned off.  Since I've
+    # decided to use experimental features (postderef
+    # is not experimental anymore in 5.24, and I find it
+    # unlikely that signatures will removed) we define our
+    # own strictures and warnings and override Moose's
+    # (usually reasonable) preferences.
+    
+    # also, add namespace::autoclean.  Wow there is a lot
+    # of boiler plate in order to do stuff in moose.  Note
+    # that this means that the use FFI::Echidna::OO should
+    # be the LAST use statement before the actual guts of
+    # the class.
+    
+    sub import ($class, @modules) {
+      no warnings 'uninitialized';
+      my $old = ${^WARNING_BITS};
+      unshift @modules, 'Moose';
+      push @modules, 'namespace::autoclean';
+      while(@modules) {
+        my $module = shift @modules;
+        my $pm = "$module.pm";
+        $pm =~ s{::}{/}g;
+        require $pm;
+        my @args = ref $modules[0] eq 'ARRAY' ? (shift @modules)->@* : ();
+        my $caller = caller;
+        $module->import::into($caller, @args);
+      }
+      ${^WARNING_BITS} = $old;
+      return;
+    }
+    
+    BEGIN { $INC{"FFI/Echidna/OO.pm"} = __FILE__ }
+  
+  }
 
   package FFI::Echidna::ProcessCaptureResult {
 
-    use Moose;
-    no warnings 'experimental::signatures';
     use Capture::Tiny qw( capture );
     use Carp qw( croak );
-    use namespace::autoclean;
+    use FFI::Echidna::OO;
 
     around BUILDARGS => sub ($orig, $class, @command_line) {
       
@@ -79,12 +117,8 @@ package FFI::Echidna {
 
   package FFI::Echidna::FS {
 
-    use Moose;
-    use MooseX::Singleton;
-    use MooseX::Types::Path::Class;
-    no warnings 'experimental::signatures';
     use File::Temp ();
-    use namespace::autoclean;
+    use FFI::Echidna::OO qw( MooseX::Singleton MooseX::Types::Path::Class );
 
     has tempdir => (
       is => 'ro',
@@ -104,11 +138,8 @@ package FFI::Echidna {
 
   package FFI::Echidna::ClangWrapper {
   
-    use Moose;
-    no warnings 'experimental::signatures';
-    use MooseX::Types::Path::Class;
     use File::Which qw( which );
-    use namespace::autoclean;
+    use FFI::Echidna::OO qw( MooseX::Types::Path::Class );
     
     has clang_path => (
       is      => 'ro',
@@ -260,9 +291,7 @@ package FFI::Echidna {
   
   package FFI::Echidna::ClangModel {
   
-    use Moose;
-    no warnings 'experimental::signatures';
-    use namespace::autoclean;
+    use FFI::Echidna::OO;
 
     around BUILDARGS => sub ($orig, $class, $path, %attr) {
 
@@ -336,7 +365,6 @@ package FFI::Echidna {
                 FFI::Echidna::ModuleModel::Function::Argument->new(%+);
               }
             : do {
-                $DB::single = 1;
                 warn "unable to parse ParmVarDecl: " . $ast->data;
                 FFI::Echidna::ModuleModel::Function::Argument->new(
                   name => 'unknown',
@@ -370,9 +398,7 @@ package FFI::Echidna {
   
   package FFI::Echidna::ClangAstNode {
 
-    use Moose;
-    no warnings 'experimental::signatures';
-    use namespace::autoclean;
+    use FFI::Echidna::OO;
 
     around BUILDARGS => sub ($orig, $class, $node) {
 
@@ -455,10 +481,7 @@ package FFI::Echidna {
   
   package FFI::Echidna::SourceLocation {
 
-    use Moose;
-    no warnings 'experimental::signatures';
-    use MooseX::Types::Path::Class;
-    use namespace::autoclean;
+    use FFI::Echidna::OO qw( MooseX::Types::Path::Class );
 
     has filename => (
       is       => 'ro',
@@ -483,9 +506,7 @@ package FFI::Echidna {
 
   package FFI::Echidna::ModuleModel {
   
-    use Moose;
-    no warnings 'experimental::signatures';
-    use namespace::autoclean;
+    use FFI::Echidna::OO;
 
     foreach my $attr (qw( constants typedefs functions )) {
       has $attr => (
@@ -533,9 +554,7 @@ package FFI::Echidna {
     
     package FFI::Echidna::ModuleModel::Constant {
         
-      use Moose;
-      no warnings 'experimental::signatures';
-      use namespace::autoclean;
+      use FFI::Echidna::OO;
       
       has name => (
         is => 'ro',
@@ -551,10 +570,8 @@ package FFI::Echidna {
     }
 
     package FFI::Echidna::ModuleModel::Typedef {
-        
-      use Moose;
-      no warnings 'experimental::signatures';
-      use namespace::autoclean;
+      
+      use FFI::Echidna::OO;
 
       has type => (
         is       => 'ro',
@@ -584,6 +601,7 @@ package FFI::Echidna {
         state $types;
         
         unless(defined $types) {
+          require FFI::Platypus;
           $types->%* = map { $_ => 1 } FFI::Platypus->types;
         }
 
@@ -605,10 +623,8 @@ package FFI::Echidna {
     }
 
     package FFI::Echidna::ModuleModel::Function {
-        
-      use Moose;
-      no warnings 'experimental::signatures';
-      use namespace::autoclean;
+      
+      use FFI::Echidna::OO;
       
       has name => (
         is       => 'ro',
@@ -630,9 +646,7 @@ package FFI::Echidna {
       
       package FFI::Echidna::ModuleModel::Function::Argument {
 
-        use Moose;
-        no warnings 'experimental::signatures';
-        use namespace::autoclean;
+        use FFI::Echidna::OO;
 
         has name => (
           is       => 'ro',
