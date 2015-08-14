@@ -1,5 +1,8 @@
 #!/usr/bin/perl
 
+# NOTE: this file is generated.  Documentation should be updated in
+# lib/App/h2ffi.pm instead and then re-run inc/run/generate_bin.pl
+
 use strict;
 use warnings;
 use 5.020;

@@ -305,14 +305,15 @@ package FFI::Echidna {
         $current_indent = $count unless defined $current_indent;
         
         if($current_indent < $count) {
-          push @stack, $current_list;
+          push @stack, [ $current_list, $current_indent ];
           $current_list = $current_list->[-1];
         } else {
           if(ref $current_list->[-1] eq 'ARRAY' && $current_list->[-1]->$#* == 0) {
             $current_list->[-1] = ($current_list->[-1]->[0]);
           }
           if($current_indent > $count) {
-            $current_list = pop @stack;
+            pop @stack while $stack[-1]->[1] > $count;
+            $current_list = (pop @stack)->[0];
           }
         }
         $current_indent = $count;
@@ -489,7 +490,7 @@ package FFI::Echidna {
       }
 
       # remove the unparsed location information      
-      $node =~ s{\<(\<invalid sloc\>|[^>]+)\>\s+([^ ]+:[0-9]+(:[0-9]+)?\s+)?}{};
+      $node =~ s{\<(\<invalid sloc\>|[^>]+)\>\s+(([^ ]+:[0-9]+(:[0-9]+|)?\s+|\<invalid sloc\>\s*))?}{};
 
       if($node =~ s{\s+echidna_location\((.*?)\)$}{})
       {

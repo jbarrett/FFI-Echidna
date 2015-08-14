@@ -15,7 +15,20 @@ package App::ech_clang_ast {
     is      => 'ro',
     isa     => 'Str',
     lazy    => 1,
-    default => 'clang',
+    default => sub ($self) {
+      $self->cpp ? 'clang++' : 'clang',
+    },
+  );
+  
+  has e => (
+    is  => 'ro',
+    isa => 'Str',
+  );
+  
+  has cpp => (
+    is      => 'ro',
+    isa     => 'Bool',
+    default => 0,
   );
   
   has _cl => (
@@ -33,6 +46,12 @@ package App::ech_clang_ast {
     coerce  => 1,
     lazy    => 1,
     default => sub ($self) {
+      if($self->e) {
+        my $header = FFI::Echidna::FS->tempfile("ech_clang_ast_XXXX", SUFFIX => '.h');
+        $header->spew($self->e);
+        return $header;
+      }
+    
       if($self->extra_argv->@* == 1) {
         my $header = $self->extra_argv->[0];
         unless(-r $header) {
@@ -53,9 +72,25 @@ package App::ech_clang_ast {
     $app->run;
     return 0;
   }
+
+  sub translate {
+    my($self, $ast) = @_;
+    my @ret;
+    foreach my $node (@{ $ast }) {
+      if(ref $node eq 'ARRAY') {
+        push @ret, $self->translate($node);
+      } else {
+        my $node2 = FFI::Echidna::ClangAstNode->new($node);
+        my $str = $node2->type;
+        $str .= " " . $node2->data if $node2->data;
+        push @ret, $str;
+      }
+    }
+    \@ret;
+  }
   
   sub run ($self) {
-    print Dump($self->_cl->ast_list($self->_header));
+    print Dump($self->translate($self->_cl->ast_list($self->_header)));
   }
 
   __PACKAGE__->meta->make_immutable;
@@ -82,6 +117,14 @@ in debugging L<h2ffi> and L<FFI::Echidna>.
 =head2 --clang
 
 Specify the clang executable to use.  Usually this is C<clang> or C<clang++>
+
+=head2 --cpp
+
+The source header file is C++ instead of C.  This is the same as C<--clang clang++>.
+
+=head2 -e
+
+Parse C / C++ code from the command line instead of from a file.
 
 =head1 SEE ALSO
 

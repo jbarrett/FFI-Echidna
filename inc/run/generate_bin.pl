@@ -28,6 +28,9 @@ foreach my $pm (grep { !$_->is_dir } dir(qw( lib App ))->children)
 __DATA__
 #!/usr/bin/perl
 
+# NOTE: this file is generated.  Documentation should be updated in
+# lib/App/[% app %].pm instead and then re-run inc/run/generate_bin.pl
+
 use strict;
 use warnings;
 use 5.020;

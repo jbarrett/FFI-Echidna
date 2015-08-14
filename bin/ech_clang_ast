@@ -1,5 +1,8 @@
 #!/usr/bin/perl
 
+# NOTE: this file is generated.  Documentation should be updated in
+# lib/App/ech_clang_ast.pm instead and then re-run inc/run/generate_bin.pl
+
 use strict;
 use warnings;
 use 5.020;
@@ -27,6 +30,14 @@ in debugging L<h2ffi> and L<FFI::Echidna>.
 =head2 --clang
 
 Specify the clang executable to use.  Usually this is C<clang> or C<clang++>
+
+=head2 --cpp
+
+The source header file is C++ instead of C.  This is the same as C<--clang clang++>.
+
+=head2 -e
+
+Parse C / C++ code from the command line instead of from a file.
 
 =head1 SEE ALSO
 
