@@ -244,16 +244,12 @@ package FFI::Echidna {
       );
     }
 
-    # TODO: instead of using a temp directory, maybe maintain
-    # a shadow in ~/.echidna/frameworks/ so that diagnostics will
-    # point to a real existing path, rather than one that
-    # evaporates after the perl process exists.
     sub _framework_path ($self, $path) {
-      state $counter = 0;
       if($^O eq 'darwin' && $path =~ s/ \(framework directory\)//) {
         $path = Path::Class::Dir->new($path);
-        my $fake_dir = FFI::Echidna::FS->tempdir->subdir('frameworks', join('.', grep !/^$/, $path->dir_list, $counter++), 'include');
+        my $fake_dir = FFI::Echidna::FS->homedir->subdir('.echidna', 'frameworks', join('.', grep !/^$/, $path->dir_list), 'include');
         $fake_dir->mkpath(0, 0700);
+        unlink $_ for $fake_dir->children;
         foreach my $old (map { $_->subdir('Headers') } grep { $_->is_dir && $_->basename =~ /\.framework$/ } $path->children) {
           my $new = $fake_dir->file($old->parent->basename =~ s/\.framework$//r);
           use autodie qw( symlink );
