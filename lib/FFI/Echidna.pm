@@ -261,6 +261,7 @@ package FFI::Echidna {
       }
     }
     
+    # ccflags = -x c++ for C++
     sub include_paths ($self) {
       my $empty = FFI::Echidna::FS->tempfile("standardXXXX", SUFFIX => '.h');
       my $result = $self->run('-E', $empty, '-v')->die_on_error;
