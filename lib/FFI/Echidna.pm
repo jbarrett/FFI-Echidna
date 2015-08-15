@@ -244,6 +244,38 @@ package FFI::Echidna {
       );
     }
 
+    # TODO: instead of using a temp directory, maybe maintain
+    # a shadow in ~/.echidna/frameworks/ so that diagnostics will
+    # point to a real existing path, rather than one that
+    # evaporates after the perl process exists.
+    sub _framework_path ($self, $path) {
+      state $counter = 0;
+      if($^O eq 'darwin' && $path =~ s/ \(framework directory\)//) {
+        $path = Path::Class::Dir->new($path);
+        my $fake_dir = FFI::Echidna::FS->tempdir->subdir('frameworks', join('.', grep !/^$/, $path->dir_list, $counter++), 'include');
+        $fake_dir->mkpath(0, 0700);
+        foreach my $old (map { $_->subdir('Headers') } grep { $_->is_dir && $_->basename =~ /\.framework$/ } $path->children) {
+          my $new = $fake_dir->file($old->parent->basename =~ s/\.framework$//r);
+          use autodie qw( symlink );
+          symlink $old, $new;
+        }
+        return $fake_dir;
+      } else {
+        Path::Class::Dir->new($path);
+      }
+    }
+    
+    sub include_paths ($self) {
+      my $empty = FFI::Echidna::FS->tempfile("standardXXXX", SUFFIX => '.h');
+      my $result = $self->run('-E', $empty, '-v')->die_on_error;
+      my @paths = split /\n\r?/, $result->stderr;
+      shift @paths while @paths && $paths[0] !~ /^#include \<\.\.\.\> search starts here:/;
+      $result->die("unable to parse header files") unless @paths;
+      shift @paths;
+      pop @paths;
+      [map { $self->_framework_path($_) } map { s/^\s+//r }@paths];
+    }
+
     sub all_macros ($self, $path=undef) {
       my %macros;
       
