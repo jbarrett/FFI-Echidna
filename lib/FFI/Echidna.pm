@@ -414,7 +414,12 @@ package FFI::Echidna {
   
   package FFI::Echidna::ClangModel {
   
-    use FFI::Echidna::OO;
+    # This started out life as a model based on the output of
+    # clang (hence the name), but now it is a model based on
+    # the output of clang and optionally the output of
+    # Convert::Binary::C (cbc).
+  
+    use FFI::Echidna::OO qw( MooseX::Types::Path::Class );
 
     around BUILDARGS => sub ($orig, $class, $path, %attr) {
 
@@ -426,22 +431,45 @@ package FFI::Echidna {
         $path = $tmp_path;
       }
       
-      $attr{ast}    = $clang->ast($path);
-      $attr{macros} = $clang->macros($path);
+      $attr{header} = $path;
     
       $class->$orig(\%attr);
 
     };
+    
+    has header => (
+      is       => 'ro',
+      isa      => 'Path::Class::File',
+      coerce   => 1,
+      required => 1,
+    );
 
     has ast => (
       is       => 'ro',
       isa      => 'FFI::Echidna::ClangAstNode',
-      required => 1,
+      lazy     => 1,
+      default  => sub ($self) {
+        $self->clang->ast($self->header);
+      },
     );
     
     has macros => (
       is       => 'ro',
-      required => 1,
+      lazy     => 1,
+      default  => sub ($self) {
+        $self->clang->macros($self->header);
+      },
+    );
+    
+    has cbc => (
+      is      => 'ro',
+      isa     => 'Convert::Binary::C',
+      lazy    => 1,
+      default => sub ($self) {
+        my $cbc = $self->clang->cbc;
+        $cbc->parse($self->header);
+        $cbc;
+      },
     );
     
     has clang => (
@@ -449,7 +477,7 @@ package FFI::Echidna {
       isa      => 'FFI::Echidna::ClangWrapper',
       required => 1,
     );
-
+    
     sub append_to_model ($self, $model, $ast=undef) {
     
       my @items;
