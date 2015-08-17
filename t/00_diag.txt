@@ -1,4 +1,5 @@
 Capture::Tiny
+Convert::Binary::C
 Devel::CheckBin
 ExtUtils::MakeMaker
 FFI::Platypus

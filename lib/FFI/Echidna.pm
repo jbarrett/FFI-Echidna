@@ -380,6 +380,17 @@ package FFI::Echidna {
       FFI::Echidna::ClangAstNode->new($self->ast_list($path));
     }
     
+    sub cbc ($self) {
+     require Convert::Binary::C;
+     my $macros = $self->all_macros;
+      my $cbc = Convert::Binary::C->new;
+      $cbc->configure(
+        Include => $self->include_paths,
+        Define  => [ map { "$_=@{[$macros->{$_}]}" } keys %$macros ],
+      );
+      $cbc;
+    }
+    
     __PACKAGE__->meta->make_immutable;
   }
   
