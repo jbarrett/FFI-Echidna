@@ -386,8 +386,26 @@ package FFI::Echidna {
       my $cbc = Convert::Binary::C->new;
       $cbc->configure(
         Include => $self->include_paths,
-        Define  => [ map { "$_=@{[$macros->{$_}]}" } keys %$macros ],
+        Define  => [ map { "$_=@{[$macros->{$_}]}" } grep !/__STDC__/, keys %$macros ],
       );
+      # There may be a better way of doing this...
+      # these types get defined on OS X in <_types/_uint32.h> etc
+      # Which ARE getting included when you include <stdint.h>
+      # BUT they are wrapped in DEFINED guards that are already
+      # defined in the set of macros that come from ->all_macros
+      # above.  A better solution MIGHT be to figure out which
+      # macros should NOT be defined.
+      $cbc->parse(q{
+        typedef unsigned char      uint8_t;
+        typedef signed   char      int8_t;
+        typedef unsigned short     uint16_t;
+        typedef signed   short     int16_t;
+        typedef unsigned int       uint32_t;
+        typedef signed   int       int32_t;
+        typedef unsigned long long uint64_t;
+        typedef signed   long long int64_t;
+        typedef unsigned long long intptr_t;
+      });
       $cbc;
     }
     
