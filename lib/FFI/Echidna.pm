@@ -264,7 +264,7 @@ package FFI::Echidna {
     # ccflags = -x c++ for C++
     sub include_paths ($self) {
       my $empty = FFI::Echidna::FS->tempfile("standardXXXX", SUFFIX => '.h');
-      my $result = $self->run('-E', $empty, '-v')->die_on_error;
+      my $result = $self->run($self->cpp_flags->@*, '-E', $empty, '-v')->die_on_error;
       my @paths = split /\n\r?/, $result->stderr;
       shift @paths while @paths && $paths[0] !~ /^#include \<\.\.\.\> search starts here:/;
       $result->die("unable to parse header files") unless @paths;
@@ -273,6 +273,10 @@ package FFI::Echidna {
       [map { $self->_framework_path($_) } map { s/^\s+//r }@paths];
     }
 
+    sub cpp ($self, $path) {
+      $self->run($self->cpp_flags->@*, '-E', $path)->die_on_error->stdout;
+    }
+    
     sub all_macros ($self, $path=undef) {
       my %macros;
       
@@ -389,21 +393,6 @@ package FFI::Echidna {
       FFI::Echidna::ClangAstNode->new($self->ast_list($path));
     }
     
-    sub cbc ($self) {
-     require Convert::Binary::C;
-     my $macros = $self->base_macros;
-      my $cbc = Convert::Binary::C->new;
-      $cbc->configure(
-        Include => $self->include_paths,
-        Define  => [ map { "$_=@{[$macros->{$_}]}" } grep !/__STDC__/, keys %$macros ],
-      );
-      $cbc->parse(join "\n",
-        '#define __attribute__(x)',
-        '#define __has_feature(x) 0',
-      );
-      $cbc;
-    }
-    
     __PACKAGE__->meta->make_immutable;
   }
   
@@ -461,8 +450,24 @@ package FFI::Echidna {
       isa     => 'Convert::Binary::C',
       lazy    => 1,
       default => sub ($self) {
-        my $cbc = $self->clang->cbc;
-        $cbc->parse($self->header);
+        my @text = split /\n\r?/, $self->clang->cpp($self->header);
+
+        my $text = join "\n", 
+          map {
+            s/^# ([0-9]+) "(.*?)".*$/#line $1 "$2"/r
+          } @text;
+        
+        require Convert::Binary::C;
+        my $cbc = Convert::Binary::C->new;
+        
+        $cbc->parse(join "\n",
+          "typedef void * __builtin_va_list;",
+          "#define __attribute__(arg)",
+          "#define __asm__(arg)",
+          "#define __restrict",
+          "#define __extension__",
+        );
+        
         $cbc;
       },
     );
