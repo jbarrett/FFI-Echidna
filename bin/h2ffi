@@ -70,6 +70,11 @@ typedef must match.
 Specify a regular expression to filter functions.  The name of the
 function must match.
 
+=head1 CAVEATS
+
+Requires clang.  Works fine with a Perl built with gcc, but you will need
+clang in your path.
+
 =head1 SEE ALSO
 
 =over 4

@@ -32,6 +32,11 @@ that doesn't deter you, you should feel free to try this out.  A
 good place to start, is perhaps [OpenGL::FFI](https://metacpan.org/pod/OpenGL::FFI) itself which will
 serve as a working example.
 
+# CAVEATS
+
+Requires clang.  Works fine with a Perl built with gcc, but you will need
+clang in your path.
+
 # SEE ALSO
 
 - [h2ffi](https://metacpan.org/pod/h2ffi)
