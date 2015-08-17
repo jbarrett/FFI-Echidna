@@ -843,6 +843,7 @@ package FFI::Echidna {
   
   package FFI::Echidna::Template::TT {
   
+    use Data::Dumper qw( Dumper );
     use FFI::Echidna::OO;
     
     with 'FFI::Echidna::Template';
@@ -856,11 +857,12 @@ package FFI::Echidna {
         my $c = Template::Context->new({
           INCLUDE_PATH => [ map { $_->stringify } $self->include_path->@* ],
           FILTERS      => {
-            perl_constant => sub ($value) {
-              eval $value;
+            perl_constant_value => sub ($value) {
+              do { no warnings; eval $value };
               # TODO: use Data::Dumper to dump this to a valid
               # Perl string, accounting for quotes and such.
-              $@ ? "'$value'" : $value;
+              local $Data::Dumper::Terse = 1;
+              $@ ? Dumper($value) =~ s/\s*$//r : $value;
             },
           },
         });
