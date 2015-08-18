@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 use 5.020;
+use experimental qw( signatures postderef );
 use Test::More tests => 1;
 use FFI::Echidna;
 
