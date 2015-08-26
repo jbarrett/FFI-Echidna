@@ -7,7 +7,7 @@ use FFI::Platypus ();
 use FFI::CheckLib ();
 use constant {
 [% FOREACH constant IN model.constants -%]
-  [% constant.name %] => [% constant.value | perl_constant_value %],
+  [% constant.name %] => [% constant.perl_render %],
 [% END -%]
 };
 
@@ -23,6 +23,9 @@ my $ffi = FFI::Platypus->new(
 
 # TYPEDEFS:
 [% FOREACH typedef IN model.typedefs -%]
+[% FOREACH todo IN typedef.todo -%]
+# TODO: [% todo %]
+[% END -%]
 $ffi->type([% typedef.perl_render %]);
 [% END -%]
 

@@ -134,23 +134,121 @@ package App::h2ffi {
 
   package App::h2ffi::Model {
   
+    use FFI::Platypus;
     use FFI::Echidna::OO;
+    use constant typedef_class => 'App::h2ffi::Model::Typedef';
+    use constant constant_class => 'App::h2ffi::Model::Constant';
     
     extends 'FFI::Echidna::ModuleModel';
     
     has app => ( is => 'ro', weak_ref => 1, isa => 'App::h2ffi' );
     
+    has ffi => ( is => 'ro', isa => 'FFI::Platypus', lazy => 1, default => sub { FFI::Platypus->new } );
+    
+    has platypus_typedefs => (
+      is      => 'ro',
+      lazy    => 1,
+      default => sub { {} },
+    );
+    
     sub filter_constants ($self, $c) {
       $c->name =~ $self->app->filter_constant ? $c : ();
     }
+    
     sub filter_typedefs ($self, $t) {
-      $t->alias =~ $self->app->filter_typedef && !$self->app->_system_model->lookup_typedef($t->alias) ? $t : ();
+      return unless $t->alias =~ $self->app->filter_typedef && !$self->app->_system_model->lookup_typedef($t->alias);
+      
+      if($t->type eq 'void *') {
+        $t->platypus_type('opaque');
+      }
+        
+      if($t->type =~ /^(const\s+)char \*$/) {
+        $t->platypus_type('string');
+        push $t->todo->@*, "@{[ $t->type ]} is usually a string, but may be a pointer to char @{[ $t->alias ]}";
+      }
+    
+      # The typedef is already defined as part of Platypus,
+      # or by a previous typedef
+      return if eval { $self->ffi->type_meta($t->alias); 1 };
+
+      # parse function pointers      
+      if($t->platypus_type =~ /^(const\s+)?(?<ret>[A-Za-z_][A-Za-z_0-9]*)\s+\(\*\)\s*\((?<args>.*?)\)$/) {
+        
+        my $ret  = $+{ret};
+        my $args = $+{args};
+        
+        my @args = map { $self->platypus_typedefs->{$_} // $_ }
+                   map { /\*/ ? do { push $t->todo->@*, "'$_' (non opaque pointer) not yet supported for closures";'opaque' } : $_ }
+                   map { /^(.*?)\s*\*$/ && ($self->platypus_typedefs->{$1}//'') eq 'void' ? 'opaque' : $_ }
+                   map { s/^const\s+//r }
+                   split /\s*,\s*/, $args;
+        $t->platypus_type('(' . join(', ', @args) . ')->' . $ret);
+        
+      }
+          
+      if(eval { $self->ffi->type($t->platypus_type => $t->alias); 1 }) {
+        $self->platypus_typedefs->{$t->alias} = $t->platypus_type;
+      } else {
+        # we aren't (yet?) smart enough to parse this type, so set it to opaque
+        # and mark it as a todo
+        push $t->todo->@*, "unable to automatically determine Platypus type for '@{[ $t->platypus_type ]}' (@{[ $t->alias ]})";
+        $t->platypus_type('opaque');
+      }
+        
+      return $t;
     }
     sub filter_functions ($self, $f) {
-      $f->name =~ $self->app->filter_function && !$self->app->_system_model->lookup_function($f->name) ? $f : ();
+      if($f->name =~ $self->app->filter_function && !$self->app->_system_model->lookup_function($f->name)) {
+        return $f;
+      } else {
+        return;
+      }
     }
 
     __PACKAGE__->meta->make_immutable;
+    
+    package App::h2ffi::Model::Typedef {
+    
+      use FFI::Echidna::OO;
+      
+      extends 'FFI::Echidna::ModuleModel::Typedef';
+      
+      has platypus_type => (
+        is      => 'rw',
+        lazy    => 1,
+        default => sub ($self) { $self->type },
+      );
+      
+      has todo => (
+        is      => 'ro',
+        lazy    => 1,
+        default => sub { [] },
+      );
+      
+      sub perl_render ($self) {
+        sprintf "'%s' => '%s'", $self->platypus_type, $self->alias;
+      }
+      
+      __PACKAGE__->meta->make_immutable
+    
+    }
+
+    package App::h2ffi::Model::Constant {
+    
+      use Data::Dumper qw( Dumper );
+      use FFI::Echidna::OO;
+      
+      extends 'FFI::Echidna::ModuleModel::Constant';
+      
+      sub perl_render ($self) {
+        my $value = $self->value;
+        do { no warnings; eval $value };
+        $@ ? do { local $Data::Dumper::Terse = 1; Dumper($value) =~ s/\s*$//r } : $value;
+      }
+      
+      __PACKAGE__->meta->make_immutable
+    
+    }
   }
 }
 

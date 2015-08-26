@@ -891,26 +891,26 @@ package FFI::Echidna {
         require Template::Context;
         my $c = Template::Context->new({
           INCLUDE_PATH => [ map { $_->stringify } $self->include_path->@* ],
-          FILTERS      => {
-            perl_constant_value => sub ($value) {
-              do { no warnings; eval $value };
-              # TODO: use Data::Dumper to dump this to a valid
-              # Perl string, accounting for quotes and such.
-              local $Data::Dumper::Terse = 1;
-              $@ ? Dumper($value) =~ s/\s*$//r : $value;
-            },
-          },
+          #FILTERS      => {
+          #  perl_constant_value => sub ($value) {
+          #    do { no warnings; eval $value };
+          #    # TODO: use Data::Dumper to dump this to a valid
+          #    # Perl string, accounting for quotes and such.
+          #    local $Data::Dumper::Terse = 1;
+          #    $@ ? Dumper($value) =~ s/\s*$//r : $value;
+          #  },
+          #},
         });
         
-        $c->define_vmethod(
-          hash => perl_render => sub ($node) {
-            if(eval { $node->isa('FFI::Echidna::ModuleModel::Typedef') }) {
-              return sprintf "'%s' => '%s'", $node->type, $node->alias;
-            } else {
-              die "perl_render does not know how to handle a ", ref $node;
-            }
-          },
-        );
+        #$c->define_vmethod(
+        #  hash => perl_render => sub ($node) {
+        #    if(eval { $node->isa('FFI::Echidna::ModuleModel::Typedef') }) {
+        #      return sprintf "'%s' => '%s'", $node->type, $node->alias;
+        #    } else {
+        #      die "perl_render does not know how to handle a ", ref $node;
+        #    }
+        #  },
+        #);
         
         Template->new({ CONTEXT => $c });
       },
