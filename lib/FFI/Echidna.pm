@@ -6,7 +6,7 @@ use experimental qw( signatures postderef );
 package FFI::Echidna {
 
   # ABSTRACT: Developer tools for FFI
-
+  
   package FFI::Echidna::Type {
   
     use Moose::Util::TypeConstraints;
@@ -290,17 +290,21 @@ package FFI::Echidna {
     sub cpp ($self, $path) {
       $self->run($self->cpp_flags->@*, '-E', $path)->die_on_error->stdout;
     }
+
+    sub _standard_headers_example ($class) {
+      state $empty;
+      unless(defined $empty) {
+        $empty = FFI::Echidna::FS->tempfile("standardXXXX", SUFFIX => '.h');
+        $empty->spew("#include <stdio.h>\n#include <stddef.h>\n#include <stdint.h>\n#include <inttypes.h>\n");
+      }
+      $empty;
+    }    
     
     sub all_macros ($self, $path=undef) {
       my %macros;
       
       unless(defined $path) {
-        state $empty;
-        unless(defined $empty) {
-          $empty = FFI::Echidna::FS->tempfile("standardXXXX", SUFFIX => '.h');
-          $empty->spew("#include <stdio.h>\n#include <stddef.h>\n#include <stdint.h>\n#include <inttypes.h>\n");
-        }
-        $path = $empty;
+        $path = __PACKAGE__->_standard_headers_example;
       }
       
       foreach my $line (split /\n\r?/, $self->run($self->cpp_flags->@*, qw( -dM -E ), $path)->die_on_error->stdout) {
@@ -502,7 +506,7 @@ package FFI::Echidna {
         my $macros = $self->macros;
         foreach my $name (grep !/^_/, sort keys %$macros) {
           push @items, $model->filter_constants(
-            FFI::Echidna::ModuleModel::Constant->new( name => $name, value => $macros->{$name} ),
+            $model->constant_class->new( name => $name, value => $macros->{$name} ),
           );
         }
         
@@ -513,7 +517,7 @@ package FFI::Echidna {
       
         if($ast->data =~ /^(?<alias>.*?)\s+'(?<type>.*?)(':'(?<real_type>.*?))?'$/) {
           push @items, $model->filter_typedefs(
-            FFI::Echidna::ModuleModel::Typedef->new(\%+)
+            $model->typedef_class->new(\%+)
           );
         } else {
           warn "unable to parse TypedefDecl: " . $ast->data;
@@ -540,7 +544,7 @@ package FFI::Echidna {
           } grep { $_->type eq 'ParmVarDecl' } $ast->children->@*;
           
           push @items, $model->filter_functions(
-            FFI::Echidna::ModuleModel::Function->new(
+            $model->function_class->new(
               name        => $name,
               return_type => $return_type,
               arguments   => \@args,
@@ -678,12 +682,16 @@ package FFI::Echidna {
   
     use FFI::Echidna::OO;
 
-    foreach my $attr (qw( constants typedefs functions )) {
-      has $attr => (
+    foreach my $name (qw( Constant Typedef Function )) {
+      has lc($name).'s' => (
         is      => 'ro',
+        isa     => "ArrayRef[FFI::Echidna::ModuleModel::$name]",
         default => sub { [] },
         lazy    => 1,
       );
+      constant->import(lc($name).'_class' => "FFI::Echidna::ModuleModel::$name");
+      no strict 'refs';
+      *{'filter_'.lc($name).'s'} = sub { $_[1] };
     }
     
     has _hash => (
@@ -692,10 +700,6 @@ package FFI::Echidna {
       lazy    => 1,
     );
     
-    sub filter_constants { ($_[1]) }
-    sub filter_typedefs  { ($_[1]) }
-    sub filter_functions { ($_[1]) }
-
     sub add ($self, @items) {
       foreach my $item (@items) {
       
