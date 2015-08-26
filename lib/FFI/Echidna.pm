@@ -16,9 +16,23 @@ package FFI::Echidna {
     subtype 'FFI::Echidna::Type::RegexpRef'
     => as 'RegexpRef';
     
+    subtype 'FFI::Echidna::Type::DirList'
+    => as 'ArrayRef[Path::Class::Dir]';
+
+    subtype 'FFI::Echidna::Type::FileList'
+    => as 'ArrayRef[Path::Class::File]';
+    
     coerce 'FFI::Echidna::Type::RegexpRef'
     => from 'Str'
     => via { qr{$_} };
+    
+    coerce 'FFI::Echidna::Type::DirList'
+    => from 'ArrayRef[Str]'
+    => via { [map { Path::Class::Dir->new($_) } $_->@*] };
+
+    coerce 'FFI::Echidna::Type::FileList'
+    => from 'ArrayRef[Str]'
+    => via { [map { Path::Class::File->new($_) } $_->@*] };
     
     MooseX::Getopt::OptionTypeMap->add_option_type_to_map(
       'FFI::Echidna::Type::RegexpRef' => '=s',

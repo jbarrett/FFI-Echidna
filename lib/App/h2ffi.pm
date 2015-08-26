@@ -6,7 +6,7 @@ use FFI::Echidna;
 
 package App::h2ffi {
 
-  use FFI::Echidna::OO;
+  use FFI::Echidna::OO qw( MooseX::Types::Path::Class );
 
   with 'MooseX::Getopt';
 
@@ -63,7 +63,12 @@ package App::h2ffi {
     is      => 'ro',
     lazy    => 1,
     default => sub ($self) {
-      my $clang = FFI::Echidna::ClangModel->new($self->_header);
+      my $clang = FFI::Echidna::ClangModel->new($self->_header, clang => {
+        cpp_flags => [
+          (map { "-I$_" } $self->I->@*),
+          (map { "-D$_" } $self->D->@*),
+        ],
+      });
       my $model = App::h2ffi::Model->new(app => $self);
       $clang->append_to_model($model);
       $model;
@@ -81,6 +86,21 @@ package App::h2ffi {
       },
     );
   }
+  
+  has I => (
+    is      => 'ro',
+    isa     => 'FFI::Echidna::Type::DirList',
+    lazy    => 1,
+    coerce  => 1,
+    default => sub { [] },
+  );
+  
+  has D => (
+    is      => 'ro',
+    isa     => 'ArrayRef[Str]',
+    lazy    => 1,
+    default => sub { [] },
+  );
   
   sub main ($class, @args) {
     local @ARGV = @args;
@@ -176,6 +196,14 @@ typedef must match.
 
 Specify a regular expression to filter functions.  The name of the
 function must match.
+
+=head2 -I
+
+C include directories.
+
+=head2 -D
+
+C macro defines
 
 =head1 CAVEATS
 

@@ -70,6 +70,14 @@ typedef must match.
 Specify a regular expression to filter functions.  The name of the
 function must match.
 
+=head2 -I
+
+C include directories.
+
+=head2 -D
+
+C macro defines
+
 =head1 CAVEATS
 
 Requires clang.  Works fine with a Perl built with gcc, but you will need
