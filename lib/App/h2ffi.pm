@@ -177,10 +177,15 @@ package App::h2ffi {
         my $ret  = $+{ret};
         my $args = $+{args};
         
+                   # resolve the type, typedefs not supported when defining a closure
         my @args = map { $self->platypus_typedefs->{$_} // $_ }
+                   # any non void pointer is not supported natively
                    map { /\*/ ? do { push $t->todo->@*, "'$_' (non opaque pointer) not yet supported for closures";'opaque' } : $_ }
+                   # special case, pointer to typedef'd void IS supported as opaque type
                    map { /^(.*?)\s*\*$/ && ($self->platypus_typedefs->{$1}//'') eq 'void' ? 'opaque' : $_ }
+                   # we don't care about const 
                    map { s/^const\s+//r }
+                   # split on , and ignore the white space
                    split /\s*,\s*/, $args;
         $t->platypus_type('(' . join(', ', @args) . ')->' . $ret);
         
