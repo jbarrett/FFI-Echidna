@@ -136,8 +136,9 @@ package App::h2ffi {
   
     use FFI::Platypus;
     use FFI::Echidna::OO;
-    use constant typedef_class => 'App::h2ffi::Model::Typedef';
+    use constant typedef_class  => 'App::h2ffi::Model::Typedef';
     use constant constant_class => 'App::h2ffi::Model::Constant';
+    use constant function_class => 'App::h2ffi::Model::Function';
     
     extends 'FFI::Echidna::ModuleModel';
     
@@ -166,6 +167,8 @@ package App::h2ffi {
         $t->platypus_type('string');
         push $t->todo->@*, "@{[ $t->type ]} is usually a string, but may be a pointer to char @{[ $t->alias ]}";
       }
+      
+      $t->platypus_type($self->platypus_typedefs->{$t->platypus_type}) while $self->platypus_typedefs->{$t->platypus_type};
     
       # The typedef is already defined as part of Platypus,
       # or by a previous typedef
@@ -211,12 +214,25 @@ package App::h2ffi {
     }
 
     __PACKAGE__->meta->make_immutable;
+
+    package App::h2ffi::Model::Todo {
+    
+      use FFI::Echidna::OO::Role;
+      
+      has todo => (
+        is      => 'ro',
+        lazy    => 1,
+        default => sub { [] },
+      );      
+    
+    }
     
     package App::h2ffi::Model::Typedef {
     
       use FFI::Echidna::OO;
       
       extends 'FFI::Echidna::ModuleModel::Typedef';
+      with 'App::h2ffi::Model::Todo';
       
       has platypus_type => (
         is      => 'rw',
@@ -224,17 +240,11 @@ package App::h2ffi {
         default => sub ($self) { $self->type },
       );
       
-      has todo => (
-        is      => 'ro',
-        lazy    => 1,
-        default => sub { [] },
-      );
-      
       sub perl_render ($self) {
         sprintf "'%s' => '%s'", $self->platypus_type, $self->alias;
       }
       
-      __PACKAGE__->meta->make_immutable
+      __PACKAGE__->meta->make_immutable;
     
     }
 
@@ -244,6 +254,7 @@ package App::h2ffi {
       use FFI::Echidna::OO;
       
       extends 'FFI::Echidna::ModuleModel::Constant';
+      with 'App::h2ffi::Model::Todo';
       
       sub perl_render ($self) {
         my $value = $self->value;
@@ -251,7 +262,18 @@ package App::h2ffi {
         $@ ? do { local $Data::Dumper::Terse = 1; Dumper($value) =~ s/\s*$//r } : $value;
       }
       
-      __PACKAGE__->meta->make_immutable
+      __PACKAGE__->meta->make_immutable;
+    
+    }
+    
+    package App::h2ffi::Model::Function {
+    
+      use FFI::Echidna::OO;
+      
+      extends 'FFI::Echidna::ModuleModel::Function';
+      with 'App::h2ffi::Model::Todo';
+      
+      __PACKAGE__->meta->make_immutable;
     
     }
   }

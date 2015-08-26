@@ -7,6 +7,9 @@ use FFI::Platypus ();
 use FFI::CheckLib ();
 use constant {
 [% FOREACH constant IN model.constants -%]
+[% FOREACH todo IN constant.todo -%]
+  # TODO: [% todo %]
+[% END -%]
   [% constant.name %] => [% constant.perl_render %],
 [% END -%]
 };
@@ -31,6 +34,9 @@ $ffi->type([% typedef.perl_render %]);
 
 # FUNCTIONS:
 [% FOREACH function IN model.functions -%]
+[% FOREACH todo IN function -%]
+# TODO: [% todo %]
+[% END %]
 $ffi->attach([% function.name %] => [] => 'void');
 [% END -%]
 

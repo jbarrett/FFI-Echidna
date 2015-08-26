@@ -60,10 +60,12 @@ package FFI::Echidna {
     # be the LAST use statement before the actual guts of
     # the class.
     
+    use constant moose_class => 'Moose';
+    
     sub import ($class, @modules) {
       no warnings 'uninitialized';
       my $old = ${^WARNING_BITS};
-      unshift @modules, 'Moose';
+      unshift @modules, $class->moose_class;
       push @modules, 'namespace::autoclean';
       while(@modules) {
         my $module = shift @modules;
@@ -79,9 +81,19 @@ package FFI::Echidna {
     }
     
     BEGIN { $INC{"FFI/Echidna/OO.pm"} = __FILE__ }
+
+    package FFI::Echidna::OO::Role {
+    
+      use constant moose_class => 'Moose::Role';
+      BEGIN { $INC{"FFI/Echidna/OO/Role.pm"} = __FILE__ }
+      sub import {
+        goto &FFI::Echidna::OO::import;
+      }
+    
+    }
   
   }
-
+  
   package FFI::Echidna::ProcessCaptureResult {
 
     use Capture::Tiny qw( capture );
@@ -862,7 +874,7 @@ package FFI::Echidna {
   
   package FFI::Echidna::Template {
     
-    use Moose::Role;
+    use FFI::Echidna::OO::Role;
     
     has include_path => (
       is      => 'ro',
@@ -872,8 +884,7 @@ package FFI::Echidna {
       },
     );
     
-    requires 'process';
-    
+    requires 'process';    
   };
   
   package FFI::Echidna::Template::TT {
