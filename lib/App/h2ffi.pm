@@ -27,10 +27,12 @@ package App::h2ffi {
     default => '5.008001',
   );
   
-  has libname => (
+  has l => (
     is => 'ro',
     isa => 'Str',
   );
+  
+  sub libname ($self) { $self->l }
   
   has _header => (
     is      => 'ro',
@@ -59,16 +61,31 @@ package App::h2ffi {
     },
   );
   
+  sub _new_clang_model ($self, $header) {
+    my $clang = FFI::Echidna::ClangModel->new($header, clang => {
+      cpp_flags => [
+        (map { "-I$_" } $self->I->@*),
+        (map { "-D$_" } $self->D->@*),
+      ],
+    });
+  }
+  
+  has _system_model => (
+    is      => 'ro',
+    lazy    => 1,
+    default => sub ($self) {
+      my $clang = $self->_new_clang_model(FFI::Echidna::ClangWrapper->_standard_headers_example);
+      my $model = FFI::Echidna::ModuleModel->new;
+      $clang->append_to_model($model);
+      $model;
+    },
+  );
+  
   has _model => (
     is      => 'ro',
     lazy    => 1,
     default => sub ($self) {
-      my $clang = FFI::Echidna::ClangModel->new($self->_header, clang => {
-        cpp_flags => [
-          (map { "-I$_" } $self->I->@*),
-          (map { "-D$_" } $self->D->@*),
-        ],
-      });
+      my $clang = $self->_new_clang_model($self->_header);
       my $model = App::h2ffi::Model->new(app => $self);
       $clang->append_to_model($model);
       $model;
@@ -127,10 +144,10 @@ package App::h2ffi {
       $c->name =~ $self->app->filter_constant ? $c : ();
     }
     sub filter_typedefs ($self, $t) {
-      $t->alias =~ $self->app->filter_typedef ? $t : ();
+      $t->alias =~ $self->app->filter_typedef && !$self->app->_system_model->lookup_typedef($t->alias) ? $t : ();
     }
     sub filter_functions ($self, $f) {
-      $f->name =~ $self->app->filter_function ? $f : ();
+      $f->name =~ $self->app->filter_function && !$self->app->_system_model->lookup_function($f->name) ? $f : ();
     }
 
     __PACKAGE__->meta->make_immutable;
@@ -166,7 +183,7 @@ should be at least 5.008001, as that is the minimum supported Perl for
 L<FFI::Platypus>.  If it is higher, then the template may use more
 recent Perl syntax features.
 
-=head2 --libname
+=head2 -l
 
 The name of the library.  This is usually the dynamic library (.so or .dll)
 without its "lib" prefix.  So OpenGL would be 'GL' and libarchive would be

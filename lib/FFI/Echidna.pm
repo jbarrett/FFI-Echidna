@@ -525,14 +525,18 @@ package FFI::Echidna {
       
       } elsif($ast->type eq 'FunctionDecl') {
       
-        if($ast->data =~ /^(?<name>[A-Za-z_][A-Za-z_0-9]+) '(const )?(?<return_type>.*)\(/) {
+        my $param_counter = 1;
+      
+        if($ast->data =~ /^(implicit\s+)?(?<name>[A-Za-z_][A-Za-z_0-9]+) '(const )?(?<return_type>.*)\(/) {
           my $name = $+{name};
           my $return_type = $+{return_type};
           my @args = map {
             my $ast = $_;
-            $ast->data =~ /^(const\s+)?(?<name>.*?) '(?<type>[^']+)(':'(?<real_type>[^']+))?'$/
+            $ast->data =~ /^(const\s+)?((?<name>.*?) )?'(?<type>[^']+)(':'(?<real_type>[^']+))?'$/
             ? do {
-                FFI::Echidna::ModuleModel::Function::Argument->new(%+);
+                my %args = %+;
+                $args{name} ||= 'param' . $param_counter++;
+                FFI::Echidna::ModuleModel::Function::Argument->new(%args);
               }
             : do {
                 warn "unable to parse ParmVarDecl: " . $ast->data;
@@ -595,6 +599,7 @@ package FFI::Echidna {
 
       # remove the unparsed location information      
       $node =~ s{\<(\<invalid sloc\>|[^>]+)\>\s+(([^ ]+:[0-9]+(:[0-9]+|)?\s+|\<invalid sloc\>\s*))?}{};
+      $node =~ s{prev 0x[0-9a-f]+\s*}{};
 
       if($node =~ s{\s+echidna_location\((.*?)\)$}{})
       {
@@ -700,6 +705,18 @@ package FFI::Echidna {
       lazy    => 1,
     );
     
+    sub lookup_constant ($self, $name) {
+      $self->_hash->{constants}->{$name};
+    }
+
+    sub lookup_typedef ($self, $alias) {
+      $self->_hash->{typedefs}->{$alias};
+    }
+    
+    sub lookup_function ($self, $name) {
+      $self->_hash->{functions}->{$name};
+    }
+
     sub add ($self, @items) {
       foreach my $item (@items) {
       
