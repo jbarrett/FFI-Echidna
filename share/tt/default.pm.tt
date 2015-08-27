@@ -34,9 +34,9 @@ $ffi->type([% typedef.perl_render %]);
 
 # FUNCTIONS:
 [% FOREACH function IN model.functions -%]
-[% FOREACH todo IN function -%]
+[% FOREACH todo IN function.todo -%]
 # TODO: [% todo %]
-[% END %]
+[% END -%]
 $ffi->attach([% function.name %] => [] => 'void');
 [% END -%]
 
