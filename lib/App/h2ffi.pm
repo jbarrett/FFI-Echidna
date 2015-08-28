@@ -32,8 +32,6 @@ package App::h2ffi {
     isa => Str,
   );
   
-  sub libname ($self) { $self->l }
-  
   has _header => (
     is      => 'ro',
     lazy    => 1,
@@ -75,19 +73,8 @@ package App::h2ffi {
     lazy    => 1,
     default => sub ($self) {
       my $clang = $self->_new_clang_model($self->_header);
-      my $model = FFI::Echidna::PerlModuleModel->new(
+      my $model = App::h2ffi::Model->new(
         app => $self,
-        string_filter_constant => $self->filter_constant,
-        string_filter_typedef  => $self->filter_typedef,
-        string_filter_function => $self->filter_function,
-        perl_package_name      => $self->perl_package_name,
-        system_model           => do {
-          my $model = FFI::Echidna::ModuleModel->new;
-          $self
-            ->_new_clang_model(FFI::Echidna::ClangWrapper->_standard_headers_example)
-            ->append_to_model($model);
-          $model;
-        },
       );
       $clang->append_to_model($model);
       $model;
@@ -155,6 +142,18 @@ package App::h2ffi {
     );
   
     has perl_package_name => ( is => 'ro', isa => Str, required => 1 );
+
+    has perl_minimum_version => (
+      is      => 'ro',
+      isa     => Str,
+      default => '5.008001',
+    );
+    
+    has libname => (
+      is  => 'ro',
+      isa => 'Maybe[Str]',
+    );
+
     has "string_filter_$_" => ( is => 'ro', isa => RegexpRef, default => sub { qr{} } ) for qw( constant typedef function );
     
     has ffi => ( is => 'ro', isa => 'FFI::Platypus', lazy => 1, default => sub { FFI::Platypus->new } );
@@ -289,6 +288,47 @@ package App::h2ffi {
       __PACKAGE__->meta->make_immutable;
     
     }
+  }
+  
+  package App::h2ffi::Model {
+  
+    use FFI::Echidna::OO;
+    
+    extends 'FFI::Echidna::PerlModuleModel';
+    
+    has app => (
+      is       => 'ro',
+      isa      => 'App::h2ffi',
+      required => 1,
+    );
+
+    foreach my $attr (qw( perl_package_name perl_minimum_version )) {
+      has "+$attr" => ( default => sub ($self) { $self->app->$attr } );
+    }
+
+    foreach my $attr (qw( constant typedef function )) {
+      my $method = "filter_$attr";
+      has "+string_filter_$attr" => ( default => sub ($self) { $self->app->$method } );
+    }
+
+    has '+system_model' => (
+      default => sub ($self) {
+        my $model = FFI::Echidna::ModuleModel->new;
+        $self
+          ->app
+          ->_new_clang_model(FFI::Echidna::ClangWrapper->_standard_headers_example)
+          ->append_to_model($model);
+        $model;
+      },
+    );
+    
+    has '+libname' => (
+      default => sub ($self) {
+        $self->app->l,
+      },
+    );
+
+    __PACKAGE__->meta->make_immutable;
   }
 }
 

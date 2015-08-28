@@ -2,7 +2,7 @@ package [% model.perl_package_name %];
 
 use strict;
 use warnings;
-use [% h2ffi.perl_minimum_version %];
+use [% model.perl_minimum_version %];
 use FFI::Platypus ();
 use FFI::CheckLib ();
 use constant {
@@ -15,16 +15,16 @@ use constant {
 };
 
 my $ffi = FFI::Platypus->new(
-[% IF h2ffi.libname -%]
+[% IF model.libname -%]
   FFI::CheckLib::find_lib_or_die(
-    lib => '[% h2ffi.libname %]',
+    lib => '[% model.libname %]',
   ),
 [% ELSE -%]
   lib => undef,
 [% END -%]
 );
 
-# TYPEDEFS:
+# TYPES:
 [% FOREACH typedef IN model.typedefs -%]
 [% FOREACH todo IN typedef.todo -%]
 # TODO: [% todo %]
