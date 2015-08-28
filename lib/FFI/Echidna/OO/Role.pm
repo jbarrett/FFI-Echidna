@@ -5,9 +5,11 @@ use experimental qw( signatures postderef );
 
 package FFI::Echidna::OO::Role {
     
+  use constant moose_class => 'Moose::Role';
+  use FFI::Echidna::OO ();
+  
   # ABSTRACT: Roles for FFI::Echidna
   
-  use constant moose_class => 'Moose::Role';
   sub import {
     goto &FFI::Echidna::OO::import;
   }
