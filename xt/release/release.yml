@@ -24,4 +24,7 @@ pod_coverage:
   private:
     - App::h2ffi
     - App::ech_clang_ast
+    - FFI::Echidna::Type
+    - FFI::Echidna::OO
+    - FFI::Echidna::OO::Role
 
