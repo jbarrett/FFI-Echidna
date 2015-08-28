@@ -37,7 +37,7 @@ $ffi->type([% typedef.perl_render %]);
 [% FOREACH todo IN function.todo -%]
 # TODO: [% todo %]
 [% END -%]
-$ffi->attach([% function.name %] => [] => 'void');
+$ffi->attach([% function.name %] => [[% function.perl_arguments.join(', ') %]] => '[% function.perl_return_type %]');
 [% END -%]
 
 1;

@@ -452,7 +452,7 @@ package FFI::Echidna {
       
         my $param_counter = 1;
       
-        if($ast->data =~ /^(implicit\s+)?(?<name>[A-Za-z_][A-Za-z_0-9]+) '(const )?(?<return_type>.*)\(/) {
+        if($ast->data =~ /^(implicit\s+)?(?<name>[A-Za-z_][A-Za-z_0-9]+) '(const )?(?<return_type>.*?)\s*\(/) {
           my $name = $+{name};
           my $return_type = $+{return_type};
           my @args = map {
@@ -850,7 +850,7 @@ package FFI::Echidna {
     
       # The typedef is already defined as part of Platypus,
       # or by a previous typedef
-      return if eval { $self->ffi->type_meta($t->alias); 1 };
+      return if eval { $self->ffi->type_meta($t->alias) };
 
       # parse function pointers      
       if($t->platypus_type =~ /^(const\s+)?(?<ret>[A-Za-z_][A-Za-z_0-9]*)\s+\(\*\)\s*\((?<args>.*?)\)$/) {
@@ -885,7 +885,36 @@ package FFI::Echidna {
     }
     sub filter_functions ($self, $f) {
       if($f->name =~ $self->string_filter_function && !$self->system_model->lookup_function($f->name)) {
-        return $f;
+        my @types;
+      
+        my $rt = $f->return_type;
+        
+        if($rt =~ /^(?<type>.*?)\s*\*$/ && ! eval { $self->ffi->type_meta($rt) }) {
+          # TODO: create a pointer type here and push onto @types
+        }
+      
+        unless(eval { $self->ffi->type_meta($rt) }) {
+          $f->perl_return_type('opaque');
+          push $f->todo->@*, "unable to automatically determine return type for '@{[ $f->name ]}' ($rt)";
+        }
+        
+        my $pos = 0;
+        my @args = map {
+          $pos++;
+          eval { $self->ffi->type_meta($_) } ? $_ : do {
+            
+            # TODO: for pointer/array types create the type and push onto @types
+          
+            push $f->todo->@*, "unable to automatically determine argument $pos for '@{[ $f->name ]}' ($_)";
+            'opaque';
+          },
+        } map { 
+          $self->platypus_types->{$_->type} ? $_->type : $_->real_type,
+        } $f->arguments->@*;
+      
+        $f->perl_arguments(\@args);
+      
+        return($f,@types);
       } else {
         return;
       }
@@ -950,6 +979,20 @@ package FFI::Echidna {
       
       extends 'FFI::Echidna::ModuleModel::Function';
       with 'FFI::Echidna::PerlModuleModel::Todo';
+      
+      has perl_return_type => (
+        is      => 'rw',
+        isa     => Str,
+        lazy    => 1,
+        default => sub ($self) { $self->return_type },
+      );
+      
+      has perl_arguments => (
+        is => 'rw',
+        isa => StrList,
+        lazy => 1,
+        default => sub ($self) { [map { "'$_'" } map { $_->type } $self->arguments->@*] },
+      );
       
       __PACKAGE__->meta->make_immutable;
     
