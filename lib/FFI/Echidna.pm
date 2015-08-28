@@ -785,6 +785,177 @@ package FFI::Echidna {
     }
   }
   
+  package FFI::Echidna::PerlModuleModel {
+  
+    use FFI::Platypus;
+    use FFI::Echidna::OO;
+    use constant typedef_class  => 'FFI::Echidna::PerlModuleModel::Typedef';
+    use constant constant_class => 'FFI::Echidna::PerlModuleModel::Constant';
+    use constant function_class => 'FFI::Echidna::PerlModuleModel::Function';
+    
+    extends 'FFI::Echidna::ModuleModel';
+    
+    has system_model => (
+      is      => 'ro',
+      lazy    => 1,
+      default => sub ($self) {
+        my $model = FFI::Echidna::ModuleModel->new;
+        FFI::Echidna::ClangModel
+          ->new(FFI::Echidna::ClangWrapper->_standard_headers_example)
+          ->append_to_model($model);
+        $model;
+      },
+    );
+  
+    has perl_package_name => ( is => 'ro', isa => Str, required => 1 );
+
+    has perl_minimum_version => (
+      is      => 'ro',
+      isa     => Str,
+      default => '5.008001',
+    );
+    
+    has libname => (
+      is  => 'ro',
+      isa => 'Maybe[Str]',
+    );
+
+    has "string_filter_$_" => ( is => 'ro', isa => RegexpRef, default => sub { qr{} } ) for qw( constant typedef function );
+    
+    has ffi => ( is => 'ro', isa => 'FFI::Platypus', lazy => 1, default => sub { FFI::Platypus->new } );
+    
+    has platypus_types => (
+      is      => 'ro',
+      lazy    => 1,
+      default => sub { {} },
+    );
+    
+    sub filter_constants ($self, $c) {
+      $c->name =~ $self->string_filter_constant ? $c : ();
+    }
+    
+    sub filter_typedefs ($self, $t) {
+      return unless $t->alias =~ $self->string_filter_typedef && !$self->system_model->lookup_typedef($t->alias);
+      
+      if($t->type eq 'void *') {
+        $t->platypus_type('opaque');
+      }
+        
+      if($t->type =~ /^(const\s+)char \*$/) {
+        $t->platypus_type('string');
+        push $t->todo->@*, "@{[ $t->type ]} is usually a string, but may be a pointer to char @{[ $t->alias ]}";
+      }
+      
+      $t->platypus_type($self->platypus_types->{$t->platypus_type}) while $self->platypus_types->{$t->platypus_type};
+    
+      # The typedef is already defined as part of Platypus,
+      # or by a previous typedef
+      return if eval { $self->ffi->type_meta($t->alias); 1 };
+
+      # parse function pointers      
+      if($t->platypus_type =~ /^(const\s+)?(?<ret>[A-Za-z_][A-Za-z_0-9]*)\s+\(\*\)\s*\((?<args>.*?)\)$/) {
+        
+        my $ret  = $+{ret};
+        my $args = $+{args};
+        
+                   # resolve the type, typedefs not supported when defining a closure
+        my @args = map { $self->platypus_types->{$_} // $_ }
+                   # any non void pointer is not supported natively
+                   map { /\*/ ? do { push $t->todo->@*, "'$_' (non opaque pointer) not yet supported for closures";'opaque' } : $_ }
+                   # special case, pointer to typedef'd void IS supported as opaque type
+                   map { /^(.*?)\s*\*$/ && ($self->platypus_types->{$1}//'') eq 'void' ? 'opaque' : $_ }
+                   # we don't care about const 
+                   map { s/^const\s+//r }
+                   # split on , and ignore the white space
+                   split /\s*,\s*/, $args;
+        $t->platypus_type('(' . join(', ', @args) . ')->' . $ret);
+        
+      }
+          
+      if(eval { $self->ffi->type($t->platypus_type => $t->alias); 1 }) {
+        $self->platypus_types->{$t->alias} = $t->platypus_type;
+      } else {
+        # we aren't (yet?) smart enough to parse this type, so set it to opaque
+        # and mark it as a todo
+        push $t->todo->@*, "unable to automatically determine Platypus type for '@{[ $t->platypus_type ]}' (@{[ $t->alias ]})";
+        $t->platypus_type('opaque');
+      }
+        
+      return $t;
+    }
+    sub filter_functions ($self, $f) {
+      if($f->name =~ $self->string_filter_function && !$self->system_model->lookup_function($f->name)) {
+        return $f;
+      } else {
+        return;
+      }
+    }
+
+    __PACKAGE__->meta->make_immutable;
+
+    package FFI::Echidna::PerlModuleModel::Todo {
+    
+      use FFI::Echidna::OO::Role;
+      
+      has todo => (
+        is      => 'ro',
+        lazy    => 1,
+        default => sub { [] },
+      );      
+    
+    }
+    
+    package FFI::Echidna::PerlModuleModel::Typedef {
+    
+      use FFI::Echidna::OO;
+      
+      extends 'FFI::Echidna::ModuleModel::Typedef';
+      with 'FFI::Echidna::PerlModuleModel::Todo';
+      
+      has platypus_type => (
+        is      => 'rw',
+        lazy    => 1,
+        default => sub ($self) { $self->type },
+      );
+      
+      sub perl_render ($self) {
+        sprintf "'%s' => '%s'", $self->platypus_type, $self->alias;
+      }
+      
+      __PACKAGE__->meta->make_immutable;
+    
+    }
+
+    package FFI::Echidna::PerlModuleModel::Constant {
+    
+      use Data::Dumper qw( Dumper );
+      use FFI::Echidna::OO;
+      
+      extends 'FFI::Echidna::ModuleModel::Constant';
+      with 'FFI::Echidna::PerlModuleModel::Todo';
+      
+      sub perl_render ($self) {
+        my $value = $self->value;
+        do { no warnings; eval $value };
+        $@ ? do { local $Data::Dumper::Terse = 1; Dumper($value) =~ s/\s*$//r } : $value;
+      }
+      
+      __PACKAGE__->meta->make_immutable;
+    
+    }
+    
+    package FFI::Echidna::PerlModuleModel::Function {
+    
+      use FFI::Echidna::OO;
+      
+      extends 'FFI::Echidna::ModuleModel::Function';
+      with 'FFI::Echidna::PerlModuleModel::Todo';
+      
+      __PACKAGE__->meta->make_immutable;
+    
+    }
+  }
+  
   package FFI::Echidna::Template {
     
     use FFI::Echidna::OO::Role;
