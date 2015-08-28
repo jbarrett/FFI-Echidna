@@ -11,39 +11,53 @@ package FFI::Echidna {
   
     use Moose::Util::TypeConstraints;
     use MooseX::Getopt ();
+    use Import::Into;
     use namespace::autoclean;
 
-    subtype 'FFI::Echidna::Type::RegexpRef'
-    => as 'RegexpRef';
-    
-    subtype 'FFI::Echidna::Type::DirList'
-    => as 'ArrayRef[Path::Class::Dir]';
+    sub import
+    {
+      my $types;
+      
+      unless($types) {
+        push $types->@*, 
+          subtype('FFI::Echidna::Type::RegexpRef' => as 'RegexpRef'),
+          subtype('FFI::Echidna::Type::DirList' => as 'ArrayRef[Path::Class::Dir]'),
+          subtype('FFI::Echidna::Type::FileList' => as 'ArrayRef[Path::Class::File]'),
+        ;
 
-    subtype 'FFI::Echidna::Type::FileList'
-    => as 'ArrayRef[Path::Class::File]';
+        coerce 'FFI::Echidna::Type::RegexpRef'
+        => from 'Str'
+        => via { qr{$_} };
     
-    coerce 'FFI::Echidna::Type::RegexpRef'
-    => from 'Str'
-    => via { qr{$_} };
-    
-    coerce 'FFI::Echidna::Type::DirList'
-    => from 'ArrayRef[Str]'
-    => via { [map { Path::Class::Dir->new($_) } $_->@*] };
+        coerce 'FFI::Echidna::Type::DirList'
+        => from 'ArrayRef[Str]'
+        => via { [map { Path::Class::Dir->new($_) } $_->@*] };
 
-    coerce 'FFI::Echidna::Type::FileList'
-    => from 'ArrayRef[Str]'
-    => via { [map { Path::Class::File->new($_) } $_->@*] };
+        coerce 'FFI::Echidna::Type::FileList'
+        => from 'ArrayRef[Str]'
+        => via { [map { Path::Class::File->new($_) } $_->@*] };
     
-    MooseX::Getopt::OptionTypeMap->add_option_type_to_map(
-      'FFI::Echidna::Type::RegexpRef' => '=s',
-    );
+        MooseX::Getopt::OptionTypeMap->add_option_type_to_map(
+          'FFI::Echidna::Type::RegexpRef' => '=s',
+        );
+      }
+      
+      my $caller = caller;
+      foreach my $type ($types->@*)
+      {
+        constant->import::into($caller, ($type->name =~ s{^.*::}{}r) => $type);
+      }
+    }
+
+    BEGIN { $INC{'FFI/Echidna/Type.pm'} = __FILE__ }
     
   }
 
   package FFI::Echidna::OO {
   
     use Import::Into;
-
+    use constant moose_class => 'Moose';
+    
     # in principle, I agree with the idea of Moose turning on
     # warnings.  In principal I agree with warning about
     # experimental features.  I disagree with turning on
@@ -60,8 +74,6 @@ package FFI::Echidna {
     # be the LAST use statement before the actual guts of
     # the class.
     
-    use constant moose_class => 'Moose';
-    
     sub import ($class, @modules) {
       my($caller, $caller_file) = caller;
       
@@ -72,6 +84,7 @@ package FFI::Echidna {
       no warnings 'uninitialized';
       my $old = ${^WARNING_BITS};
       unshift @modules, $class->moose_class;
+      push @modules, 'FFI::Echidna::Type';
       push @modules, 'namespace::autoclean';
       while(@modules) {
         my $module = shift @modules;

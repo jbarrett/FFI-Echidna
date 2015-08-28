@@ -97,7 +97,7 @@ package App::h2ffi {
       is      => 'ro',
       lazy    => 1,
       coerce  => 1,
-      isa     => 'FFI::Echidna::Type::RegexpRef',
+      isa     => RegexpRef,
       default => sub {
         qr{},
       },
@@ -106,7 +106,7 @@ package App::h2ffi {
   
   has I => (
     is      => 'ro',
-    isa     => 'FFI::Echidna::Type::DirList',
+    isa     => DirList,
     lazy    => 1,
     coerce  => 1,
     default => sub { [] },
