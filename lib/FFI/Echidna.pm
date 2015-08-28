@@ -63,6 +63,12 @@ package FFI::Echidna {
     use constant moose_class => 'Moose';
     
     sub import ($class, @modules) {
+      my($caller, $caller_file) = caller;
+      
+      my $pm = "$caller.pm";
+      $pm =~ s{::}{/}g;
+      $INC{$pm} //= $caller_file;
+
       no warnings 'uninitialized';
       my $old = ${^WARNING_BITS};
       unshift @modules, $class->moose_class;
@@ -73,10 +79,10 @@ package FFI::Echidna {
         $pm =~ s{::}{/}g;
         require $pm;
         my @args = ref $modules[0] eq 'ARRAY' ? (shift @modules)->@* : ();
-        my $caller = caller;
         $module->import::into($caller, @args);
       }
       ${^WARNING_BITS} = $old;
+      
       return;
     }
     
@@ -935,11 +941,7 @@ package FFI::Echidna {
       
       return;
     }
-    
-    BEGIN { $INC{'FFI/Echidna/Template/TT.pm'} = __FILE__ }
-  
   }
-  
 }
 
 1;
