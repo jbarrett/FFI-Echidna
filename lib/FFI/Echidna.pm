@@ -452,7 +452,7 @@ package FFI::Echidna {
       
         my $param_counter = 1;
       
-        if($ast->data =~ /^(implicit\s+)?(?<name>[A-Za-z_][A-Za-z_0-9]+) '(const )?(?<return_type>.*?)\s*\(/) {
+        if($ast->data =~ /^(implicit\s+)?(?<name>[A-Za-z_][A-Za-z_0-9]+) '(const )?(?<return_type>.*?)\s*\(/) { #'
           my $name = $+{name};
           my $return_type = $+{return_type};
           my @args = map {
