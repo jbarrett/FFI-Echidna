@@ -78,11 +78,11 @@ package FFI::Echidna {
     use File::Temp ();
     use File::ShareDir qw( dist_dir );
     use File::HomeDir ();
-    use FFI::Echidna::OO qw( MooseX::Singleton MooseX::Types::Path::Class );
+    use FFI::Echidna::OO qw( MooseX::Singleton );
 
     has tempdir => (
       is      => 'ro',
-      isa     => 'Path::Class::Dir',
+      isa     => Dir,
       coerce  => 1,
       default => sub { File::Temp::tempdir( CLEANUP => 1 ) },
       lazy    => 1,
@@ -96,7 +96,7 @@ package FFI::Echidna {
     
     has sharedir => (
       is      => 'ro',
-      isa     => 'Path::Class::Dir',
+      isa     => Dir,
       coerce  => 1,
       lazy    => 1,
       default => sub {
@@ -121,7 +121,7 @@ package FFI::Echidna {
     
     has homedir => (
       is      => 'ro',
-      isa     => 'Path::Class::Dir',
+      isa     => Dir,
       coerce  => 1,
       lazy    => 1,
       default => sub ($self) {
@@ -139,11 +139,11 @@ package FFI::Echidna {
   package FFI::Echidna::ClangWrapper {
   
     use File::Which qw( which );
-    use FFI::Echidna::OO qw( MooseX::Types::Path::Class );
+    use FFI::Echidna::OO;
     
     has clang_path => (
       is      => 'ro',
-      isa     => 'Path::Class::File',
+      isa     => File,
       coerce  => 1,
       lazy    => 1,
       default => sub {
@@ -346,7 +346,7 @@ package FFI::Echidna {
     # the output of clang and optionally the output of
     # Convert::Binary::C (cbc).
   
-    use FFI::Echidna::OO qw( MooseX::Types::Path::Class );
+    use FFI::Echidna::OO;
 
     around BUILDARGS => sub ($orig, $class, $path, %attr) {
 
@@ -366,7 +366,7 @@ package FFI::Echidna {
     
     has header => (
       is       => 'ro',
-      isa      => 'Path::Class::File',
+      isa      => File,
       coerce   => 1,
       required => 1,
     );
@@ -581,11 +581,11 @@ package FFI::Echidna {
   
   package FFI::Echidna::SourceLocation {
 
-    use FFI::Echidna::OO qw( MooseX::Types::Path::Class );
+    use FFI::Echidna::OO;
 
     has filename => (
       is       => 'ro',
-      isa      => 'Path::Class::File',
+      isa      => File,
       required => 1,
       coerce   => 1,
     );

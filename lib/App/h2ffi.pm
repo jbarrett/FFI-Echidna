@@ -6,7 +6,7 @@ use FFI::Echidna;
 
 package App::h2ffi {
 
-  use FFI::Echidna::OO qw( MooseX::Types::Path::Class );
+  use FFI::Echidna::OO;
 
   with 'MooseX::Getopt';
 

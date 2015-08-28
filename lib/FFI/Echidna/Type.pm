@@ -7,41 +7,44 @@ package FFI::Echidna::Type {
 
   # ABSTRACT: Moose types for FFI::Echidna
   
+  # note: considered using MooseX::Types for this,
+  # but it actually seems to redistribute the
+  # boilerplate, rather than reducing it so...
+  
   use Moose::Util::TypeConstraints;
   use MooseX::Getopt ();
+  use MooseX::Types::Path::Class ();
   use Import::Into;
   use namespace::autoclean;
 
+  my @types = (
+    subtype('FFI::Echidna::Type::RegexpRef' => as 'RegexpRef'),
+    subtype('FFI::Echidna::Type::DirList' => as 'ArrayRef[Path::Class::Dir]'),
+    subtype('FFI::Echidna::Type::FileList' => as 'ArrayRef[Path::Class::File]'),
+    MooseX::Types::Path::Class::File,
+    MooseX::Types::Path::Class::Dir,
+  );
+
+  coerce 'FFI::Echidna::Type::RegexpRef'
+  => from 'Str'
+  => via { qr{$_} };
+    
+  coerce 'FFI::Echidna::Type::DirList'
+  => from 'ArrayRef[Str]'
+  => via { [map { Path::Class::Dir->new($_) } $_->@*] };
+
+  coerce 'FFI::Echidna::Type::FileList'
+  => from 'ArrayRef[Str]'
+  => via { [map { Path::Class::File->new($_) } $_->@*] };
+    
+  MooseX::Getopt::OptionTypeMap->add_option_type_to_map(
+    'FFI::Echidna::Type::RegexpRef' => '=s',
+  );
+
   sub import
   {
-    my $types;
-      
-    unless($types) {
-      push $types->@*, 
-        subtype('FFI::Echidna::Type::RegexpRef' => as 'RegexpRef'),
-        subtype('FFI::Echidna::Type::DirList' => as 'ArrayRef[Path::Class::Dir]'),
-        subtype('FFI::Echidna::Type::FileList' => as 'ArrayRef[Path::Class::File]'),
-      ;
-
-      coerce 'FFI::Echidna::Type::RegexpRef'
-      => from 'Str'
-      => via { qr{$_} };
-    
-      coerce 'FFI::Echidna::Type::DirList'
-      => from 'ArrayRef[Str]'
-      => via { [map { Path::Class::Dir->new($_) } $_->@*] };
-
-      coerce 'FFI::Echidna::Type::FileList'
-      => from 'ArrayRef[Str]'
-      => via { [map { Path::Class::File->new($_) } $_->@*] };
-    
-      MooseX::Getopt::OptionTypeMap->add_option_type_to_map(
-        'FFI::Echidna::Type::RegexpRef' => '=s',
-      );
-    }
-      
     my $caller = caller;
-    foreach my $type ($types->@*)
+    foreach my $type (@types)
     {
       constant->import::into($caller, ($type->name =~ s{^.*::}{}r) => $type);
     }

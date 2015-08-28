@@ -7,7 +7,7 @@ use FFI::Echidna;
 package App::ech_clang_ast {
 
   use YAML::XS qw( Dump );
-  use FFI::Echidna::OO qw( MooseX::Types::Path::Class );
+  use FFI::Echidna::OO;
 
   with 'MooseX::Getopt';
 

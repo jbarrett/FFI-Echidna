@@ -36,6 +36,7 @@ package FFI::Echidna::OO {
     my $old = ${^WARNING_BITS};
     unshift @modules, $class->moose_class;
     push @modules, 'FFI::Echidna::Type';
+    push @modules, 'MooseX::Types::Path::Class';
     push @modules, 'namespace::autoclean';
     while(@modules) {
       my $module = shift @modules;
