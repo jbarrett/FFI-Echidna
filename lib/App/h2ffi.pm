@@ -127,7 +127,7 @@ package App::h2ffi {
   }
   
   sub run ($self) {
-    $self->_tt->process('perl.pm.tt', { h2ffi => $self, model => $self->_model } );
+    $self->_tt->process('default.pm.tt', { h2ffi => $self, model => $self->_model } );
   }
 
   __PACKAGE__->meta->make_immutable;
