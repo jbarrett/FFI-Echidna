@@ -70,23 +70,25 @@ package App::h2ffi {
     });
   }
   
-  has _system_model => (
-    is      => 'ro',
-    lazy    => 1,
-    default => sub ($self) {
-      my $clang = $self->_new_clang_model(FFI::Echidna::ClangWrapper->_standard_headers_example);
-      my $model = FFI::Echidna::ModuleModel->new;
-      $clang->append_to_model($model);
-      $model;
-    },
-  );
-  
   has _model => (
     is      => 'ro',
     lazy    => 1,
     default => sub ($self) {
       my $clang = $self->_new_clang_model($self->_header);
-      my $model = App::h2ffi::Model->new(app => $self);
+      my $model = FFI::Echidna::PerlModuleModel->new(
+        app => $self,
+        string_filter_constant => $self->filter_constant,
+        string_filter_typedef  => $self->filter_typedef,
+        string_filter_function => $self->filter_function,
+        perl_package_name      => $self->perl_package_name,
+        system_model           => do {
+          my $model = FFI::Echidna::ModuleModel->new;
+          $self
+            ->_new_clang_model(FFI::Echidna::ClangWrapper->_standard_headers_example)
+            ->append_to_model($model);
+          $model;
+        },
+      );
       $clang->append_to_model($model);
       $model;
     },
@@ -98,9 +100,7 @@ package App::h2ffi {
       lazy    => 1,
       coerce  => 1,
       isa     => RegexpRef,
-      default => sub {
-        qr{},
-      },
+      default => sub { qr{} },
     );
   }
   
@@ -127,37 +127,50 @@ package App::h2ffi {
   }
   
   sub run ($self) {
-    $self->_tt->process('default.pm.tt', { h2ffi => $self, model => $self->_model } );
+    $self->_tt->process('perl.pm.tt', { h2ffi => $self, model => $self->_model } );
   }
 
   __PACKAGE__->meta->make_immutable;
 
-  package App::h2ffi::Model {
+  package FFI::Echidna::PerlModuleModel {
   
     use FFI::Platypus;
     use FFI::Echidna::OO;
-    use constant typedef_class  => 'App::h2ffi::Model::Typedef';
-    use constant constant_class => 'App::h2ffi::Model::Constant';
-    use constant function_class => 'App::h2ffi::Model::Function';
+    use constant typedef_class  => 'FFI::Echidna::PerlModuleModel::Typedef';
+    use constant constant_class => 'FFI::Echidna::PerlModuleModel::Constant';
+    use constant function_class => 'FFI::Echidna::PerlModuleModel::Function';
     
     extends 'FFI::Echidna::ModuleModel';
     
-    has app => ( is => 'ro', weak_ref => 1, isa => 'App::h2ffi' );
+    has system_model => (
+      is      => 'ro',
+      lazy    => 1,
+      default => sub ($self) {
+        my $model = FFI::Echidna::ModuleModel->new;
+        FFI::Echidna::ClangModel
+          ->new(FFI::Echidna::ClangWrapper->_standard_headers_example)
+          ->append_to_model($model);
+        $model;
+      },
+    );
+  
+    has perl_package_name => ( is => 'ro', isa => Str, required => 1 );
+    has "string_filter_$_" => ( is => 'ro', isa => RegexpRef, default => sub { qr{} } ) for qw( constant typedef function );
     
     has ffi => ( is => 'ro', isa => 'FFI::Platypus', lazy => 1, default => sub { FFI::Platypus->new } );
     
-    has platypus_typedefs => (
+    has platypus_types => (
       is      => 'ro',
       lazy    => 1,
       default => sub { {} },
     );
     
     sub filter_constants ($self, $c) {
-      $c->name =~ $self->app->filter_constant ? $c : ();
+      $c->name =~ $self->string_filter_constant ? $c : ();
     }
     
     sub filter_typedefs ($self, $t) {
-      return unless $t->alias =~ $self->app->filter_typedef && !$self->app->_system_model->lookup_typedef($t->alias);
+      return unless $t->alias =~ $self->string_filter_typedef && !$self->system_model->lookup_typedef($t->alias);
       
       if($t->type eq 'void *') {
         $t->platypus_type('opaque');
@@ -168,7 +181,7 @@ package App::h2ffi {
         push $t->todo->@*, "@{[ $t->type ]} is usually a string, but may be a pointer to char @{[ $t->alias ]}";
       }
       
-      $t->platypus_type($self->platypus_typedefs->{$t->platypus_type}) while $self->platypus_typedefs->{$t->platypus_type};
+      $t->platypus_type($self->platypus_types->{$t->platypus_type}) while $self->platypus_types->{$t->platypus_type};
     
       # The typedef is already defined as part of Platypus,
       # or by a previous typedef
@@ -181,11 +194,11 @@ package App::h2ffi {
         my $args = $+{args};
         
                    # resolve the type, typedefs not supported when defining a closure
-        my @args = map { $self->platypus_typedefs->{$_} // $_ }
+        my @args = map { $self->platypus_types->{$_} // $_ }
                    # any non void pointer is not supported natively
                    map { /\*/ ? do { push $t->todo->@*, "'$_' (non opaque pointer) not yet supported for closures";'opaque' } : $_ }
                    # special case, pointer to typedef'd void IS supported as opaque type
-                   map { /^(.*?)\s*\*$/ && ($self->platypus_typedefs->{$1}//'') eq 'void' ? 'opaque' : $_ }
+                   map { /^(.*?)\s*\*$/ && ($self->platypus_types->{$1}//'') eq 'void' ? 'opaque' : $_ }
                    # we don't care about const 
                    map { s/^const\s+//r }
                    # split on , and ignore the white space
@@ -195,7 +208,7 @@ package App::h2ffi {
       }
           
       if(eval { $self->ffi->type($t->platypus_type => $t->alias); 1 }) {
-        $self->platypus_typedefs->{$t->alias} = $t->platypus_type;
+        $self->platypus_types->{$t->alias} = $t->platypus_type;
       } else {
         # we aren't (yet?) smart enough to parse this type, so set it to opaque
         # and mark it as a todo
@@ -206,7 +219,7 @@ package App::h2ffi {
       return $t;
     }
     sub filter_functions ($self, $f) {
-      if($f->name =~ $self->app->filter_function && !$self->app->_system_model->lookup_function($f->name)) {
+      if($f->name =~ $self->string_filter_function && !$self->system_model->lookup_function($f->name)) {
         return $f;
       } else {
         return;
@@ -215,7 +228,7 @@ package App::h2ffi {
 
     __PACKAGE__->meta->make_immutable;
 
-    package App::h2ffi::Model::Todo {
+    package FFI::Echidna::PerlModuleModel::Todo {
     
       use FFI::Echidna::OO::Role;
       
@@ -227,12 +240,12 @@ package App::h2ffi {
     
     }
     
-    package App::h2ffi::Model::Typedef {
+    package FFI::Echidna::PerlModuleModel::Typedef {
     
       use FFI::Echidna::OO;
       
       extends 'FFI::Echidna::ModuleModel::Typedef';
-      with 'App::h2ffi::Model::Todo';
+      with 'FFI::Echidna::PerlModuleModel::Todo';
       
       has platypus_type => (
         is      => 'rw',
@@ -248,13 +261,13 @@ package App::h2ffi {
     
     }
 
-    package App::h2ffi::Model::Constant {
+    package FFI::Echidna::PerlModuleModel::Constant {
     
       use Data::Dumper qw( Dumper );
       use FFI::Echidna::OO;
       
       extends 'FFI::Echidna::ModuleModel::Constant';
-      with 'App::h2ffi::Model::Todo';
+      with 'FFI::Echidna::PerlModuleModel::Todo';
       
       sub perl_render ($self) {
         my $value = $self->value;
@@ -266,12 +279,12 @@ package App::h2ffi {
     
     }
     
-    package App::h2ffi::Model::Function {
+    package FFI::Echidna::PerlModuleModel::Function {
     
       use FFI::Echidna::OO;
       
       extends 'FFI::Echidna::ModuleModel::Function';
-      with 'App::h2ffi::Model::Todo';
+      with 'FFI::Echidna::PerlModuleModel::Todo';
       
       __PACKAGE__->meta->make_immutable;
     

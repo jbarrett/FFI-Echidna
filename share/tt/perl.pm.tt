@@ -1,4 +1,4 @@
-package [% h2ffi.perl_package_name %];
+package [% model.perl_package_name %];
 
 use strict;
 use warnings;
