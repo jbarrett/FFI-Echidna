@@ -91,7 +91,7 @@ package FFI::Echidna {
     sub tempfile ($class, @rest) {
       my($fh, $filename) = $class->tempdir->tempfile(@rest);
       close $fh;
-      Path::Class::File->new($filename);
+      File->coerce($filename);
     }
     
     has sharedir => (
@@ -107,7 +107,7 @@ package FFI::Echidna {
           my $dir = eval { dist_dir('FFI-Echidna') };
           return $dir unless $@;
         }
-        my $dir = Path::Class::File->new($INC{'FFI/Echidna.pm'})
+        my $dir = File->coerce($INC{'FFI/Echidna.pm'})
           ->absolute
           ->parent
           ->parent
@@ -185,7 +185,7 @@ package FFI::Echidna {
 
     sub _framework_path ($self, $path) {
       if($^O eq 'darwin' && $path =~ s/ \(framework directory\)//) {
-        $path = Path::Class::Dir->new($path);
+        $path = Dir->coerce($path);
         my $fake_dir = FFI::Echidna::FS->homedir->subdir('.echidna', 'frameworks', join('.', grep !/^$/, $path->dir_list), 'include');
         $fake_dir->mkpath(0, 0700);
         unlink $_ for $fake_dir->children;
@@ -196,7 +196,7 @@ package FFI::Echidna {
         }
         return $fake_dir;
       } else {
-        Path::Class::Dir->new($path);
+        Dir->coerce($path);
       }
     }
     
@@ -533,7 +533,7 @@ package FFI::Echidna {
           map {
             my($path, $line, $column) = split /:/;
             
-            $path = $files->{$path} //= Path::Class::File->new($path);
+            $path = $files->{$path} //= File->coerce($path);
             
             FFI::Echidna::SourceLocation->new(
               filename => $path,
@@ -592,13 +592,13 @@ package FFI::Echidna {
     
     has line => (
       is       => 'ro',
-      isa      => 'Int',
+      isa      => Int,
       required => 1,
     );
     
     has column => (
       is       => 'ro',
-      isa      => 'Int',
+      isa      => Int,
       required => 1,
     );
     

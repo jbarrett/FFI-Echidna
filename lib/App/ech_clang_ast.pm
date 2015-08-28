@@ -13,7 +13,7 @@ package App::ech_clang_ast {
 
   has clang => (
     is      => 'ro',
-    isa     => 'Str',
+    isa     => Str,
     lazy    => 1,
     default => sub ($self) {
       $self->cpp ? 'clang++' : 'clang',
@@ -22,12 +22,12 @@ package App::ech_clang_ast {
   
   has e => (
     is  => 'ro',
-    isa => 'Str',
+    isa => Str,
   );
   
   has cpp => (
     is      => 'ro',
-    isa     => 'Bool',
+    isa     => Bool,
     default => 0,
   );
   
@@ -42,7 +42,7 @@ package App::ech_clang_ast {
 
   has _header => (
     is      => 'ro',
-    isa     => 'Path::Class::File',
+    isa     => File,
     coerce  => 1,
     lazy    => 1,
     default => sub ($self) {

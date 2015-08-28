@@ -19,10 +19,16 @@ package FFI::Echidna::Type {
 
   my @types = (
     subtype('FFI::Echidna::Type::RegexpRef' => as 'RegexpRef'),
-    subtype('FFI::Echidna::Type::DirList' => as 'ArrayRef[Path::Class::Dir]'),
-    subtype('FFI::Echidna::Type::FileList' => as 'ArrayRef[Path::Class::File]'),
-    MooseX::Types::Path::Class::File,
-    MooseX::Types::Path::Class::Dir,
+    subtype('FFI::Echidna::Type::DirList'   => as 'ArrayRef[Path::Class::Dir]'),
+    subtype('FFI::Echidna::Type::FileList'  => as 'ArrayRef[Path::Class::File]'),
+    subtype('FFI::Echidna::Type::StrList'   => as 'ArrayRef[Str]'),
+    MooseX::Types::Path::Class::File->__type_constraint,
+    MooseX::Types::Path::Class::Dir->__type_constraint,
+    map { Moose::Util::TypeConstraints::get_type_constraint_registry->get_type_constraint($_) } qw(
+      Int
+      Str
+      Bool
+    ),
   );
 
   coerce 'FFI::Echidna::Type::RegexpRef'

@@ -13,7 +13,7 @@ package App::h2ffi {
   has perl_package_name => (
     is      => 'ro',
     lazy    => 1,
-    isa     => 'Str',
+    isa     => Str,
     default => sub ($self) {
       my @package = map { ucfirst $_ } split /\//, $self->_header;
       $package[-1] =~ s/\.(c|cpp|cxx|h|hpp|hxx)$//;
@@ -23,13 +23,13 @@ package App::h2ffi {
   
   has perl_minimum_version => (
     is      => 'ro',
-    isa     => 'Str',
+    isa     => Str,
     default => '5.008001',
   );
   
   has l => (
     is => 'ro',
-    isa => 'Str',
+    isa => Str,
   );
   
   sub libname ($self) { $self->l }
@@ -114,7 +114,7 @@ package App::h2ffi {
   
   has D => (
     is      => 'ro',
-    isa     => 'ArrayRef[Str]',
+    isa     => StrList,
     lazy    => 1,
     default => sub { [] },
   );
