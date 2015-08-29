@@ -128,7 +128,7 @@ package App::h2ffi {
   
   has debug => (
     is      => 'ro',
-    isa     => subtype( 'Str', where { /^(h|ast|module)$/n } ),
+    isa     => subtype( 'Str', where { /^(h|ast|module)$/ } ),
     lazy    => 1,
     default => 'module',
   );
