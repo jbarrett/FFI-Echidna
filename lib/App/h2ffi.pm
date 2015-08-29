@@ -6,7 +6,7 @@ use FFI::Echidna;
 
 package App::h2ffi {
 
-  use FFI::Echidna::OO;
+  use FFI::Echidna::OO qw( Moose::Util::TypeConstraints );
 
   with 'MooseX::Getopt';
 
@@ -34,16 +34,23 @@ package App::h2ffi {
   
   has _header => (
     is      => 'ro',
+    isa     => Str,
+    lazy    => 1,
+    default => sub ($self) {
+      unless($self->extra_argv->@* == 1) {
+        die "must provide exactly one header file to translate";
+      }
+      $self->extra_argv->[0];
+    },
+  );
+  
+  has _header_file => (
+    is      => 'ro',
     isa     => HeaderFile,
     lazy    => 1,
     coerce  => 1,
     default => sub ($self) {
-      if($self->extra_argv->@* == 1) {
-        my $h = $self->extra_argv->[0];
-        return $h ne 'sys' ? $h : FFI::Echidna::ClangWrapper->_standard_headers_example;
-      } else {
-        die "must provide exactly one header file to translate";
-      }
+      $self->_header ne 'sys' ? $self->_header : FFI::Echidna::ClangWrapper->_standard_headers_example;
     },
   );
   
@@ -121,7 +128,7 @@ package App::h2ffi {
   
   has debug => (
     is      => 'ro',
-    isa     => 'Str',
+    isa     => subtype( 'Str', where { /^(h|ast|module)$/n } ),
     lazy    => 1,
     default => 'module',
   );
@@ -139,11 +146,11 @@ package App::h2ffi {
     } elsif($self->debug eq 'h') {
       say $self
         ->_new_clang_wrapper
-        ->cpp_out($self->_header);
+        ->cpp_out($self->_header_file);
     } elsif($self->debug eq 'ast') {
       say $self
         ->_new_clang_wrapper
-        ->ast_out($self->_header);
+        ->ast_out($self->_header_file);
     }
   }
 
