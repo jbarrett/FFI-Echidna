@@ -18,10 +18,11 @@ package FFI::Echidna::Type {
   use namespace::autoclean;
 
   my @types = (
-    subtype('FFI::Echidna::Type::RegexpRef' => as 'RegexpRef'),
-    subtype('FFI::Echidna::Type::DirList'   => as 'ArrayRef[Path::Class::Dir]'),
-    subtype('FFI::Echidna::Type::FileList'  => as 'ArrayRef[Path::Class::File]'),
-    subtype('FFI::Echidna::Type::StrList'   => as 'ArrayRef[Str]'),
+    subtype('FFI::Echidna::Type::RegexpRef'  => as 'RegexpRef'),
+    subtype('FFI::Echidna::Type::DirList'    => as 'ArrayRef[Path::Class::Dir]'),
+    subtype('FFI::Echidna::Type::FileList'   => as 'ArrayRef[Path::Class::File]'),
+    subtype('FFI::Echidna::Type::StrList'    => as 'ArrayRef[Str]'),
+    subtype('FFI::Echidna::Type::HeaderFile' => as 'Path::Class::File'),
     MooseX::Types::Path::Class::File->__type_constraint,
     MooseX::Types::Path::Class::Dir->__type_constraint,
     map { Moose::Util::TypeConstraints::get_type_constraint_registry->get_type_constraint($_) } qw(
@@ -42,9 +43,22 @@ package FFI::Echidna::Type {
   coerce 'FFI::Echidna::Type::FileList'
   => from 'ArrayRef[Str]'
   => via { [map { Path::Class::File->new($_) } $_->@*] };
+  
+  use constant File => MooseX::Types::Path::Class::File->__type_constraint;
+  
+  coerce 'FFI::Echidna::Type::HeaderFile'
+  => from 'Str',
+  => via {
+    -r File->coerce($_) ? $_ : do {
+      my $tmp = FFI::Echidna::FS->tempfile('clang_model_XXXXXX', SUFFIX => '.h');
+      $tmp->spew("#include <$_>");
+      $tmp
+    }
+  };
     
   MooseX::Getopt::OptionTypeMap->add_option_type_to_map(
-    'FFI::Echidna::Type::RegexpRef' => '=s',
+    'FFI::Echidna::Type::RegexpRef'  => '=s',
+    'FFI::Echidna::Type::HeaderFile' => '=s',
   );
 
   sub import

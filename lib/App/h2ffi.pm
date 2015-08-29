@@ -34,10 +34,13 @@ package App::h2ffi {
   
   has _header => (
     is      => 'ro',
+    isa     => HeaderFile,
     lazy    => 1,
+    coerce  => 1,
     default => sub ($self) {
       if($self->extra_argv->@* == 1) {
-        return $self->extra_argv->[0];
+        my $h = $self->extra_argv->[0];
+        return $h ne 'sys' ? $h : FFI::Echidna::ClangWrapper->_standard_headers_example;
       } else {
         die "must provide exactly one header file to translate";
       }
@@ -59,13 +62,23 @@ package App::h2ffi {
     },
   );
   
-  sub _new_clang_model ($self, $header) {
-    my $clang = FFI::Echidna::ClangModel->new($header, clang => {
-      cpp_flags => [
+  has _clang_wrapper_flags => (
+    is      => 'ro',
+    lazy    => 1,
+    default => sub ($self) {
+      { cpp_flags => [
         (map { "-I$_" } $self->I->@*),
         (map { "-D$_" } $self->D->@*),
-      ],
-    });
+      ]};
+    },
+  );
+  
+  sub _new_clang_model ($self, $header) {
+    FFI::Echidna::ClangModel->new($header, clang => $self->_clang_wrapper_flags);
+  }
+  
+  sub _new_clang_wrapper ($self) {
+    FFI::Echidna::ClangWrapper->new($self->_clang_wrapper_flags->%*);
   }
   
   has _model => (
@@ -106,6 +119,13 @@ package App::h2ffi {
     default => sub { [] },
   );
   
+  has debug => (
+    is      => 'ro',
+    isa     => 'Str',
+    lazy    => 1,
+    default => 'module',
+  );
+  
   sub main ($class, @args) {
     local @ARGV = @args;
     my $app = App::h2ffi->new_with_options;
@@ -114,7 +134,17 @@ package App::h2ffi {
   }
   
   sub run ($self) {
-    $self->_tt->process('default.pm.tt', { model => $self->_model } );
+    if($self->debug eq 'module') {
+      $self->_tt->process('default.pm.tt', { model => $self->_model } );
+    } elsif($self->debug eq 'h') {
+      say $self
+        ->_new_clang_wrapper
+        ->cpp_out($self->_header);
+    } elsif($self->debug eq 'ast') {
+      say $self
+        ->_new_clang_wrapper
+        ->ast_out($self->_header);
+    }
   }
 
   __PACKAGE__->meta->make_immutable;

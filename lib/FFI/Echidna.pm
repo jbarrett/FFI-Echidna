@@ -155,12 +155,14 @@ package FFI::Echidna {
     
     has cpp_flags => (
       is      => 'ro',
+      isa     => StrList,
       default => sub { [] },
       lazy    => 1,
     );
 
     has version => (
       is      => 'ro',
+      isa     => Str,
       lazy    => 1,
       default => sub ($self) {
         my $result = $self->run("--version")->die_on_error;
@@ -269,8 +271,22 @@ package FFI::Echidna {
       $mine;
     }
     
+    sub cpp_out ($self, $path) {
+      $self
+        ->run($self->cpp_flags->@*, qw( -E ), $path)
+        ->die_on_error
+        ->stdout;
+    }
+    
+    sub ast_out ($self, $path) {
+      $self
+        ->run($self->cpp_flags->@*, qw( -Xclang -ast-dump -fsyntax-only ), $path)
+        ->die_on_error
+        ->stdout;
+    }
+    
     sub ast_list ($self, $path) {
-      my($first, @out) = split /\n\r?/, $self->run($self->cpp_flags->@*, qw( -Xclang -ast-dump -fsyntax-only ), $path)->die_on_error->stdout;
+      my($first, @out) = split /\n\r?/, $self->ast_out($path);
       
       my @ast = ($first);
       
@@ -349,19 +365,9 @@ package FFI::Echidna {
     use FFI::Echidna::OO;
 
     around BUILDARGS => sub ($orig, $class, $path, %attr) {
-
       my $clang = $attr{clang} = FFI::Echidna::ClangWrapper->new($attr{clang}||={});
-      
-      unless(-r $path) {
-        my $tmp_path = FFI::Echidna::FS->tempfile("clang_model_XXXXXX", SUFFIX => ".h");
-        $tmp_path->spew("#include <$path>\n");
-        $path = $tmp_path;
-      }
-      
-      $attr{header} = $path;
-    
+      $attr{header} = HeaderFile->coerce($path);    
       $class->$orig(\%attr);
-
     };
     
     has header => (
@@ -514,6 +520,10 @@ package FFI::Echidna {
       ];
 
       my $fulltext = $node;
+      
+      if($node eq '<<<NULL>>> echidna_location()') {
+        $node = 'NULL 0x0 ';
+      }
 
       if($node =~ s{^([A-Za-z]+) (0x[0-9a-f]+) }{}) {
         $attr{type} = $1;
