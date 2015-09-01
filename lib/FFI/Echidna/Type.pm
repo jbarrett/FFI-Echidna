@@ -1,7 +1,6 @@
 use strict;
 use warnings;
 use 5.020;
-use experimental qw( signatures postderef );
 
 package FFI::Echidna::Type {
 
@@ -15,6 +14,7 @@ package FFI::Echidna::Type {
   use MooseX::Getopt ();
   use MooseX::Types::Path::Class ();
   use Import::Into;
+  use experimental qw( signatures postderef );
   use namespace::autoclean;
 
   my @types = (
