@@ -9,6 +9,15 @@ package FFI::Echidna::OO {
   
   use Import::Into;
   use constant moose_class => 'Moose';
+
+  # Idea borrowed from Moo::Lax, which turned fatal warnings
+  # off for Moo classes.  Fatal warnings are highly discouraged
+  # for modules, and it took a looooooong time for the Moo
+  # developers to accept this, so some enterprising developer
+  # created Moo::Lax which works just like Moo, except for
+  # without fatal warnings.  Moo finally does not turn on
+  # fatal warnings, so Moo::Lax is now an empty subclass of
+  # Moo that requires Moo 2.x
     
   # in principle, I agree with the idea of Moose turning on
   # warnings.  In principal I agree with warning about
