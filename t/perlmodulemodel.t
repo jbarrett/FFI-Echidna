@@ -4,10 +4,9 @@ use 5.020;
 use Test::More tests => 1;
 use FFI::Echidna;
 
-my $header = FFI::Echidna::FS->tempfile("fooXXXX", SUFFIX => '.h');
-$header->spew(do { local $/; <DATA> });
+my $header = do { local $/; <DATA> };
 
-my $clang = FFI::Echidna::ClangModel->new($header);
+my $clang = FFI::Echidna::ClangModel->new(\$header);
 my $model = FFI::Echidna::PerlModuleModel->new(
   perl_package_name => 'Foo',
 );
@@ -21,10 +20,11 @@ FFI::Echidna::Template::TT
   ->new
   ->process('default.pm.tt', { model => $model }, \$pm);
 
+note $header;
+note '====================';
 note $pm;
 
 __DATA__
-
 typedef int foo_t;
 typedef long bar_t;
 

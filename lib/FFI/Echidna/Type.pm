@@ -55,6 +55,14 @@ package FFI::Echidna::Type {
       $tmp
     }
   };
+  
+  coerce 'FFI::Echidna::Type::HeaderFile'
+  => from 'ScalarRef[Str]'
+  => via {
+    my $tmp = FFI::Echidna::FS->tempfile("echidnaXXXXX", SUFFIX => '.h');
+    $tmp->spew($$_);
+    $tmp;
+  };
     
   MooseX::Getopt::OptionTypeMap->add_option_type_to_map(
     'FFI::Echidna::Type::RegexpRef'  => '=s',
