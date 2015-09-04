@@ -280,7 +280,7 @@ package FFI::Echidna {
     
     sub ast_out ($self, $path) {
       $self
-        ->run($self->cpp_flags->@*, qw( -Xclang -ast-dump -fsyntax-only ), $path)
+        ->run($self->cpp_flags->@*, qw( -Xclang -ast-dump -fsyntax-only ), HeaderFile->coerce($path))
         ->die_on_error
         ->stdout;
     }
@@ -401,21 +401,19 @@ package FFI::Echidna {
       default => sub ($self) {
         my @text = split /\n\r?/, $self->clang->cpp($self->header);
 
-        my $text = join "\n", 
+        my $source = join "\n", 
+          "typedef void * __builtin_va_list;",
+          "#define __attribute__(arg)",
+          "#define __asm__(arg)",
+          "#define __restrict",
+          "#define __extension__",
           map {
             s/^# ([0-9]+) "(.*?)".*$/#line $1 "$2"/r
           } @text;
         
         require Convert::Binary::C;
         my $cbc = Convert::Binary::C->new;
-        
-        $cbc->parse(join "\n",
-          "typedef void * __builtin_va_list;",
-          "#define __attribute__(arg)",
-          "#define __asm__(arg)",
-          "#define __restrict",
-          "#define __extension__",
-        );
+        $cbc->parse($source);
         
         $cbc;
       },
@@ -430,9 +428,19 @@ package FFI::Echidna {
     sub append_to_model ($self, $model, $ast=undef) {
     
       my @items;
-      
+
       unless(defined $ast) {
 
+        # handle enums
+        foreach my $enum ($self->cbc->enum) {
+          foreach my $name (keys $enum->{enumerators}->%*) {
+            my $value = $enum->{enumerators}->{$name};
+            push @items, $model->filter_constants(
+              $model->constant_class->new( name => $name, value => $value ),
+            );
+          }
+        }
+      
         # handle macros
         my $macros = $self->macros;
         foreach my $name (grep !/^_/, sort keys %$macros) {

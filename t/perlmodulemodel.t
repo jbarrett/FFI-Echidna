@@ -3,6 +3,7 @@ use warnings;
 use 5.020;
 use Test::More tests => 4;
 use FFI::Echidna;
+use YAML::XS qw( Dump );
 
 my $header = do { local $/; <DATA> };
 
@@ -22,6 +23,8 @@ FFI::Echidna::Template::TT
 
 note $header;
 note '====================';
+note Dump($clang->clang->ast_list(\$header));
+note '====================';
 note $pm;
 
 is eval "return 'compiles';$pm", 'compiles', 'generated code compiles';
@@ -38,9 +41,10 @@ subtest 'core model' => sub {
   plan tests => 4;
   
   subtest 'constants' => sub {
-    plan tests => 2;
+    plan tests => 3;
     is $model->lookup_constant('FOO1')->value, 22, 'FOO1 = 22';
     is $model->lookup_constant('FOO1')->value, 22, 'BAR2 = 33';
+    is $model->lookup_constant('SUNDAY')->value, 0, 'SUNDAY = 0';
   };
 
   subtest 'types' => sub {
@@ -67,6 +71,16 @@ subtest 'core model' => sub {
 __DATA__
 #define FOO1 22
 #define BAR2 33
+
+enum DAY {
+  SATURDAY,
+  SUNDAY = 0,
+  MONDAY,
+  TUESDAY,
+  WEDNESDAY,
+  THURSDAY,
+  FRIDAY
+} workday;
 
 typedef int foo_t;
 typedef long bar_t;
