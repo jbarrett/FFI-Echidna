@@ -446,7 +446,7 @@ package FFI::Echidna {
     
       if($ast->type eq 'TypedefDecl') {
       
-        if($ast->data =~ /^(?<alias>.*?)\s+'(?<type>.*?)(':'(?<real_type>.*?))?'$/) {
+        if($ast->data =~ /^(referenced\s+)?(?<alias>.*?)\s+'(?<type>.*?)(':'(?<real_type>.*?))?'$/) {
           push @items, $model->filter_typedefs(
             $model->typedef_class->new(\%+)
           );
@@ -723,28 +723,6 @@ package FFI::Echidna {
         $self->real_type =~ /\*/;
       }
       
-      sub ffi_platypus_type ($self, $model) {
-        state $types;
-        
-        unless(defined $types) {
-          require FFI::Platypus;
-          $types->%* = map { $_ => 1 } FFI::Platypus->types;
-        }
-
-        return 'opaque' if $self->type eq 'void *' || $self->type =~ /^struct [A-Za-z_][A-Za-z_0-9]* \*$/;
-        return $self->type if defined $types->{$self->type};
-        return $self->real_type if defined $types->{$self->real_type};
-        
-        if($self->real_type =~ /^(.*?) \(\*\)\((.*)\)$/)
-        {
-          my $return_type = $1;
-          my @args = map { /\*/ ? 'opaque' : $_  } map { s{^const\s+}{}r } split /\s*,\s*/, $2;
-          return "(" . join(',', @args) . ")->$return_type";
-        }
-        
-        return '';
-      }
-
       __PACKAGE__->meta->make_immutable;
     }
 
@@ -840,18 +818,21 @@ package FFI::Echidna {
       default => sub { {} },
     );
     
+    sub todos ($self) {
+      [map { $_->todo->@* } ($self->constants->@*, $self->typedefs->@*, $self->functions->@*)]
+    }
+    
     sub filter_constants ($self, $c) {
       $c->name =~ $self->string_filter_constant ? $c : ();
     }
     
     sub filter_typedefs ($self, $t) {
       return unless $t->alias =~ $self->string_filter_typedef && !$self->system_model->lookup_typedef($t->alias);
+      return if $t->alias =~ /^implicit/;
       
       if($t->type eq 'void *') {
         $t->platypus_type('opaque');
-      }
-        
-      if($t->type =~ /^(const\s+)char \*$/) {
+      } elsif($t->type =~ /^(const\s+)char \*$/) {
         $t->platypus_type('string');
         push $t->todo->@*, "@{[ $t->type ]} is usually a string, but may be a pointer to char @{[ $t->alias ]}";
       }
@@ -860,7 +841,7 @@ package FFI::Echidna {
     
       # The typedef is already defined as part of Platypus,
       # or by a previous typedef
-      return if eval { $self->ffi->type_meta($t->alias) };
+      return $t if eval { $self->ffi->type_meta($t->alias) };
 
       # parse function pointers      
       if($t->platypus_type =~ /^(const\s+)?(?<ret>[A-Za-z_][A-Za-z_0-9]*)\s+\(\*\)\s*\((?<args>.*?)\)$/) {
@@ -922,7 +903,7 @@ package FFI::Echidna {
           $self->platypus_types->{$_->type} ? $_->type : $_->real_type,
         } $f->arguments->@*;
       
-        $f->perl_arguments(\@args);
+        $f->perl_arguments([map { "'$_'" } @args]);
       
         return($f,@types);
       } else {

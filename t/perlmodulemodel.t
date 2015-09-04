@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 use 5.020;
-use Test::More tests => 1;
+use Test::More tests => 4;
 use FFI::Echidna;
 
 my $header = do { local $/; <DATA> };
@@ -24,7 +24,50 @@ note $header;
 note '====================';
 note $pm;
 
+is eval "return 'compiles';$pm", 'compiles', 'generated code compiles';
+diag $@ if $@;
+
+subtest 'secondary meta' => sub {
+  plan tests => 3;
+  is $model->perl_package_name, 'Foo', 'package Foo';
+  is $model->perl_minimum_version, '5.008001', 'requires Perl 5.8.1 by default';
+  is $model->libname, undef, 'no libname';
+};
+
+subtest 'core model' => sub {
+  plan tests => 4;
+  
+  subtest 'constants' => sub {
+    plan tests => 2;
+    is $model->lookup_constant('FOO1')->value, 22, 'FOO1 = 22';
+    is $model->lookup_constant('FOO1')->value, 22, 'BAR2 = 33';
+  };
+
+  subtest 'types' => sub {
+    plan tests => 2;
+    is $model->lookup_typedef('foo_t')->type, 'int', 'foo_t = int';
+    is $model->lookup_typedef('bar_t')->type, 'long', 'foo_t = int';
+  };
+  
+  subtest 'functions' => sub {
+    plan tests => 4;
+    is $model->lookup_function('baz1')->name, 'baz1', 'have baz1';
+    is $model->lookup_function('baz2')->name, 'baz2', 'have baz2';
+    is $model->lookup_function('baz3')->name, 'baz3', 'have baz3';
+    is $model->lookup_function('baz4')->name, 'baz4', 'have baz4';
+  };
+  
+  my @todos = $model->todos->@*;
+  
+  is scalar @todos, 0, 'No TODOs';
+  diag $_ for @todos;
+  
+};
+
 __DATA__
+#define FOO1 22
+#define BAR2 33
+
 typedef int foo_t;
 typedef long bar_t;
 
