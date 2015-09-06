@@ -396,7 +396,7 @@ package FFI::Echidna {
     
     has cbc => (
       is      => 'ro',
-      isa     => 'Convert::Binary::C',
+      isa     => 'Maybe[Convert::Binary::C]',
       lazy    => 1,
       default => sub ($self) {
         my @text = split /\n\r?/, $self->clang->cpp($self->header);
@@ -413,8 +413,8 @@ package FFI::Echidna {
         
         require Convert::Binary::C;
         my $cbc = Convert::Binary::C->new;
-        $cbc->parse($source);
-        
+        eval { $cbc->parse($source) };
+        if($@) { warn $@; return; }
         $cbc;
       },
     );
@@ -432,12 +432,14 @@ package FFI::Echidna {
       unless(defined $ast) {
 
         # handle enums
-        foreach my $enum ($self->cbc->enum) {
-          foreach my $name (keys $enum->{enumerators}->%*) {
-            my $value = $enum->{enumerators}->{$name};
-            push @items, $model->filter_constants(
-              $model->constant_class->new( name => $name, value => $value ),
-            );
+        if($self->cbc) {
+          foreach my $enum ($self->cbc->enum) {
+            foreach my $name (keys $enum->{enumerators}->%*) {
+              my $value = $enum->{enumerators}->{$name};
+              push @items, $model->filter_constants(
+                $model->constant_class->new( name => $name, value => $value ),
+              );
+            }
           }
         }
       
