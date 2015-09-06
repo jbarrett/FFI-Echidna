@@ -41,3 +41,5 @@ $ffi->attach([% function.name %] => [[% function.perl_arguments.join(', ') %]] =
 [% END -%]
 
 1;
+
+__END__
