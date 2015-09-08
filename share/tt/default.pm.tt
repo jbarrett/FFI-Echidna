@@ -43,3 +43,15 @@ $ffi->attach([% function.name %] => [[% function.perl_arguments.join(', ') %]] =
 1;
 
 __END__
+
+=head1 NAME
+
+[% model.perl_package_name ] - FFI bindings for [% model.libname %]
+
+=head1 SYNOPSIS
+
+ use [% model.perl_package_name %];
+
+=head1 DESCRIPTION
+
+=cut
