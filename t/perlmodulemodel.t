@@ -1,7 +1,7 @@
 use strict;
 use warnings;
-use experimental qw( postderef );
 use 5.020;
+use experimental qw( postderef );
 use Test::More tests => 4;
 use FFI::Echidna;
 use YAML::XS qw( Dump );
